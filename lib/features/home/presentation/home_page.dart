@@ -33,6 +33,7 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final serverRegistry = ref.watch(serverControllerProvider);
     final activeServer = ref.watch(activeServerProvider);
+    final servers = serverRegistry.servers;
 
     if (serverRegistry.isLoading && activeServer == null) {
       return const Center(child: CircularProgressIndicator());
@@ -62,8 +63,10 @@ class HomePage extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: 32),
       children: [
-        _ServerHero(server: activeServer),
-        const SizedBox(height: 28),
+        if (servers.length > 1) ...[
+          _HomeServerSwitcher(activeServer: activeServer, servers: servers),
+          const SizedBox(height: 24),
+        ],
         switch (homeFeed) {
           AsyncLoading() => const Center(child: CircularProgressIndicator()),
           AsyncError(:final error) => _HomeFailureCard(error: error),
@@ -95,48 +98,105 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-class _ServerHero extends StatelessWidget {
-  const _ServerHero({required this.server});
+class _HomeServerSwitcher extends ConsumerWidget {
+  const _HomeServerSwitcher({
+    required this.activeServer,
+    required this.servers,
+  });
 
-  final MediaServerProfile server;
+  final MediaServerProfile activeServer;
+  final List<MediaServerProfile> servers;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(32),
-      child: Container(
-        padding: const EdgeInsets.all(28),
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF163A60), Color(0xFF0C1118)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    return PopupMenuButton<String>(
+      tooltip: '切换服务器',
+      position: PopupMenuPosition.under,
+      onSelected: (serverId) {
+        ref.read(serverControllerProvider.notifier).setActiveServer(serverId);
+      },
+      itemBuilder: (context) => [
+        for (final server in servers)
+          PopupMenuItem<String>(
+            value: server.id,
+            enabled: server.id != activeServer.id,
+            child: Row(
+              children: [
+                Icon(
+                  server.id == activeServer.id
+                      ? Icons.check_circle_rounded
+                      : Icons.storage_rounded,
+                  size: 18,
+                  color: server.id == activeServer.id
+                      ? scheme.primary
+                      : scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    server.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: scheme.outlineVariant.withValues(alpha: 0.24),
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '继续使用 ${server.name}',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w800,
+        child: Padding(
+          key: const Key('home-server-switcher'),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Icon(
+                Icons.swap_horiz_rounded,
+                size: 18,
+                color: scheme.primary,
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              server.baseUrl,
-              style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white70),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              '现在会以海报和横幅卡片展示 Emby 首页内容，不再只是占位文本列表。',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.white70,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '当前服务器',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      activeServer.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Icon(
+                Icons.expand_more_rounded,
+                color: scheme.onSurfaceVariant,
+              ),
+            ],
+          ),
         ),
       ),
     );
