@@ -12,11 +12,9 @@ final windowControlServiceProvider = Provider<WindowControlService>((ref) {
 });
 
 abstract interface class WindowControlService {
-  Future<void> hideMainWindow();
+  Future<void> minimizeMainWindow();
 
-  Future<void> showMainWindow();
-
-  Future<void> presentMainWindow();
+  Future<void> restoreMainWindow();
 }
 
 class LinuxWindowControlService implements WindowControlService {
@@ -25,18 +23,13 @@ class LinuxWindowControlService implements WindowControlService {
   static const MethodChannel _channel = MethodChannel('flumby/window_control');
 
   @override
-  Future<void> hideMainWindow() {
-    return _channel.invokeMethod<void>('hideMainWindow');
+  Future<void> minimizeMainWindow() {
+    return _channel.invokeMethod<void>('minimizeMainWindow');
   }
 
   @override
-  Future<void> presentMainWindow() {
-    return _channel.invokeMethod<void>('presentMainWindow');
-  }
-
-  @override
-  Future<void> showMainWindow() {
-    return _channel.invokeMethod<void>('showMainWindow');
+  Future<void> restoreMainWindow() {
+    return _channel.invokeMethod<void>('restoreMainWindow');
   }
 }
 
@@ -44,11 +37,8 @@ class NoopWindowControlService implements WindowControlService {
   const NoopWindowControlService();
 
   @override
-  Future<void> hideMainWindow() async {}
+  Future<void> minimizeMainWindow() async {}
 
   @override
-  Future<void> presentMainWindow() async {}
-
-  @override
-  Future<void> showMainWindow() async {}
+  Future<void> restoreMainWindow() async {}
 }

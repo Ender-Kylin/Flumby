@@ -33,10 +33,10 @@ class PlayerController extends Notifier<PlayerStateSnapshot> {
   late final SettingsState _initialSettings;
   late final WindowControlService _windowControlService;
   late final PlayerPresentationMode _presentationMode;
-  late final bool _hideMainWindowDuringPlayback;
+  late final bool _minimizeMainWindowDuringPlayback;
   late PlayerStateSnapshot _latestSnapshot;
   StreamSubscription<PlayerBridgeEvent>? _bridgeEventsSubscription;
-  bool _mainWindowHidden = false;
+  bool _mainWindowMinimized = false;
   int _lastPersistedPosition = 0;
   int _lastReportedPosition = -1;
 
@@ -56,9 +56,9 @@ class PlayerController extends Notifier<PlayerStateSnapshot> {
         Platform.isLinux && _initialSettings.openInSeparateWindow
         ? PlayerPresentationMode.separateWindow
         : PlayerPresentationMode.embedded;
-    // Keep Flumby visible for now so external playback always has an in-app
-    // way to close/recover, even if the mpv window manager actions misbehave.
-    _hideMainWindowDuringPlayback = false;
+    _minimizeMainWindowDuringPlayback =
+        _presentationMode == PlayerPresentationMode.separateWindow &&
+        _initialSettings.minimizeMainWindowDuringExternalPlayback;
     _windowControlService = ref.read(windowControlServiceProvider);
     _bridge = ref.read(playerBridgeFactoryProvider)();
     _bridgeEventsSubscription = _bridge.events.listen((event) {
@@ -111,17 +111,6 @@ class PlayerController extends Notifier<PlayerStateSnapshot> {
     );
   }
 
-  Future<void> closePlaybackWindow() async {
-    if (!_currentSnapshot.isSeparateWindow ||
-        !_currentSnapshot.externalWindowActive) {
-      return;
-    }
-
-    await _persistProgress(force: true, snapshot: _currentSnapshot);
-    await _reportProgress(isPaused: true, snapshot: _currentSnapshot);
-    await _bridge.close();
-  }
-
   Future<void> seekTo(int seconds) async {
     await _bridge.seek(Duration(seconds: seconds));
     _setSnapshot(_mergeBridgeState(_bridge.currentState));
@@ -167,11 +156,22 @@ class PlayerController extends Notifier<PlayerStateSnapshot> {
         externalWindowActive: false,
         launchError: launchError,
         clearLaunchError: launchError == null,
+        lifecycleEvent: PlayerLifecycleEvent.none,
       ),
     );
     if (launchError != null) {
       await _restoreMainWindow();
     }
+  }
+
+  void consumeLifecycleEvent() {
+    if (_currentSnapshot.lifecycleEvent == PlayerLifecycleEvent.none) {
+      return;
+    }
+
+    _setSnapshot(
+      _currentSnapshot.copyWith(lifecycleEvent: PlayerLifecycleEvent.none),
+    );
   }
 
   void _syncProgressTicker() {
@@ -206,10 +206,11 @@ class PlayerController extends Notifier<PlayerStateSnapshot> {
             _bridge.currentState,
             externalWindowActive: _currentSnapshot.isSeparateWindow,
             clearLaunchError: true,
+            lifecycleEvent: PlayerLifecycleEvent.none,
           ),
         );
-        if (_hideMainWindowDuringPlayback) {
-          await _hideMainWindow();
+        if (_minimizeMainWindowDuringPlayback) {
+          await _minimizeMainWindow();
         }
         await _persistProgress(force: true, snapshot: _currentSnapshot);
         await _reportProgress(
@@ -224,6 +225,7 @@ class PlayerController extends Notifier<PlayerStateSnapshot> {
             _bridge.currentState,
             externalWindowActive: false,
             clearLaunchError: true,
+            lifecycleEvent: PlayerLifecycleEvent.restoreAndPop,
           ),
         );
         _positionTimer?.cancel();
@@ -238,6 +240,7 @@ class PlayerController extends Notifier<PlayerStateSnapshot> {
             externalWindowActive: false,
             errorMessage: event.message,
             clearLaunchError: true,
+            lifecycleEvent: PlayerLifecycleEvent.restoreAndPop,
           ),
         );
         _positionTimer?.cancel();
@@ -256,6 +259,7 @@ class PlayerController extends Notifier<PlayerStateSnapshot> {
             externalWindowActive: false,
             errorMessage: message,
             launchError: message,
+            lifecycleEvent: PlayerLifecycleEvent.none,
           ),
         );
         _positionTimer?.cancel();
@@ -333,38 +337,40 @@ class PlayerController extends Notifier<PlayerStateSnapshot> {
   Future<void> _disposeSession() async {
     _positionTimer?.cancel();
     await _bridgeEventsSubscription?.cancel();
+    if (_latestSnapshot.externalWindowActive) {
+      await _bridge.close();
+    }
     await _restoreMainWindow();
     await _persistProgress(force: true, snapshot: _latestSnapshot);
     await _reportProgress(isPaused: true, snapshot: _latestSnapshot);
     await _bridge.dispose();
   }
 
-  Future<void> _hideMainWindow() async {
-    if (_mainWindowHidden) {
+  Future<void> _minimizeMainWindow() async {
+    if (_mainWindowMinimized) {
       return;
     }
 
     try {
-      await _windowControlService.hideMainWindow();
-      _mainWindowHidden = true;
+      await _windowControlService.minimizeMainWindow();
+      _mainWindowMinimized = true;
     } catch (_) {
-      // Window restoration should still work even if hide fails.
+      // Restoration should still work even if minimization fails.
     }
   }
 
   Future<void> _restoreMainWindow() async {
-    if (!_mainWindowHidden &&
+    if (!_mainWindowMinimized &&
         _presentationMode != PlayerPresentationMode.separateWindow) {
       return;
     }
 
     try {
-      await _windowControlService.showMainWindow();
-      await _windowControlService.presentMainWindow();
+      await _windowControlService.restoreMainWindow();
     } catch (_) {
       // If restoration fails we still want provider disposal to continue.
     } finally {
-      _mainWindowHidden = false;
+      _mainWindowMinimized = false;
     }
   }
 
@@ -374,12 +380,17 @@ class PlayerController extends Notifier<PlayerStateSnapshot> {
     String? errorMessage,
     String? launchError,
     bool clearLaunchError = false,
+    PlayerLifecycleEvent? lifecycleEvent,
   }) {
     final currentLaunchError = clearLaunchError
         ? null
         : (launchError ?? stateOrNull?.launchError);
     final currentExternalWindowActive =
         externalWindowActive ?? stateOrNull?.externalWindowActive ?? false;
+    final currentLifecycleEvent =
+        lifecycleEvent ??
+        stateOrNull?.lifecycleEvent ??
+        PlayerLifecycleEvent.none;
 
     return snapshot.copyWith(
       source: snapshot.source ?? _source,
@@ -387,6 +398,7 @@ class PlayerController extends Notifier<PlayerStateSnapshot> {
       externalWindowActive: currentExternalWindowActive,
       errorMessage: errorMessage ?? snapshot.errorMessage,
       launchError: currentLaunchError,
+      lifecycleEvent: currentLifecycleEvent,
     );
   }
 

@@ -23,65 +23,70 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test(
-    'controller keeps Flumby visible and restores state on external playback errors',
+    'controller minimizes Flumby after file load and restores with pop lifecycle on shutdown',
     () async {
-      final database = AppDatabase(NativeDatabase.memory());
-      final secureStorage = _FakeSecureStorageService();
-      final preferences = AppPreferencesRepository(database, secureStorage);
-      final playbackRepository = PlaybackStateRepository(
-        database,
-        secureStorage,
-      );
-      final serverRepository = ServerLocalRepository(
-        database,
-        preferences,
-        secureStorage,
-      );
-      final bridge = _FakePlayerBridge();
-      final windowControl = _RecordingWindowControlService();
-      final adapter = _FakeMediaServerAdapter();
+      final harness = _ControllerHarness.create();
+      addTearDown(harness.dispose);
 
-      final container = ProviderContainer(
-        overrides: [
-          appDatabaseProvider.overrideWithValue(database),
-          secureStorageProvider.overrideWithValue(secureStorage),
-          appPreferencesRepositoryProvider.overrideWithValue(preferences),
-          playbackStateRepositoryProvider.overrideWithValue(playbackRepository),
-          serverLocalRepositoryProvider.overrideWithValue(serverRepository),
-          playerBridgeFactoryProvider.overrideWithValue(() => bridge),
-          windowControlServiceProvider.overrideWithValue(windowControl),
-          mediaServerAdapterProvider.overrideWith((ref, type) => adapter),
-        ],
-      );
-
-      final subscription = container.listen(
+      final subscription = harness.container.listen(
         playerControllerProvider(_testLaunchContext()),
         (previous, next) {},
       );
-      addTearDown(() async {
-        subscription.close();
-        container.dispose();
-        await Future<void>.delayed(Duration.zero);
-        await database.close();
-      });
+      addTearDown(subscription.close);
 
       await _pump();
-      expect(windowControl.hideCalls, 0);
-      expect(windowControl.showCalls, 0);
+      expect(harness.windowControl.minimizeCalls, 0);
 
-      bridge.emit(
+      harness.bridge.emit(
         const PlayerBridgeEvent(type: PlayerBridgeEventType.fileLoaded),
       );
       await _pump();
 
-      final afterFileLoaded = container.read(
+      final afterFileLoaded = harness.container.read(
         playerControllerProvider(_testLaunchContext()),
       );
       expect(afterFileLoaded.externalWindowActive, isTrue);
-      expect(windowControl.hideCalls, 0);
-      expect(adapter.reports, isNotEmpty);
+      expect(harness.windowControl.minimizeCalls, 1);
+      expect(afterFileLoaded.lifecycleEvent, PlayerLifecycleEvent.none);
+      expect(harness.adapter.reports, isNotEmpty);
 
-      bridge.emit(
+      harness.bridge.emit(
+        const PlayerBridgeEvent(
+          type: PlayerBridgeEventType.shutdown,
+          message: 'mpv window closed.',
+        ),
+      );
+      await _pump();
+
+      final afterShutdown = harness.container.read(
+        playerControllerProvider(_testLaunchContext()),
+      );
+      expect(afterShutdown.externalWindowActive, isFalse);
+      expect(afterShutdown.lifecycleEvent, PlayerLifecycleEvent.restoreAndPop);
+      expect(harness.windowControl.restoreCalls, 1);
+    },
+  );
+
+  test(
+    'controller restores Flumby on external playback errors without pop lifecycle event',
+    () async {
+      final harness = _ControllerHarness.create();
+      addTearDown(harness.dispose);
+
+      final subscription = harness.container.listen(
+        playerControllerProvider(_testLaunchContext()),
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
+
+      await _pump();
+
+      harness.bridge.emit(
+        const PlayerBridgeEvent(type: PlayerBridgeEventType.fileLoaded),
+      );
+      await _pump();
+
+      harness.bridge.emit(
         const PlayerBridgeEvent(
           type: PlayerBridgeEventType.error,
           message: 'stream failed',
@@ -89,15 +94,38 @@ void main() {
       );
       await _pump();
 
-      final afterError = container.read(
+      final afterError = harness.container.read(
         playerControllerProvider(_testLaunchContext()),
       );
       expect(afterError.externalWindowActive, isFalse);
       expect(afterError.launchError, 'stream failed');
-      expect(windowControl.showCalls, 1);
-      expect(windowControl.presentCalls, 1);
+      expect(afterError.lifecycleEvent, PlayerLifecycleEvent.none);
+      expect(harness.windowControl.restoreCalls, 1);
     },
   );
+
+  test('controller closes active external playback when disposed', () async {
+    final harness = _ControllerHarness.create();
+
+    final subscription = harness.container.listen(
+      playerControllerProvider(_testLaunchContext()),
+      (previous, next) {},
+    );
+
+    await _pump();
+    harness.bridge.emit(
+      const PlayerBridgeEvent(type: PlayerBridgeEventType.fileLoaded),
+    );
+    await _pump();
+
+    subscription.close();
+    harness.container.dispose();
+    await _pump();
+
+    expect(harness.bridge.closeCalls, 1);
+    expect(harness.windowControl.restoreCalls, 1);
+    await harness.database.close();
+  });
 }
 
 Future<void> _pump() async {
@@ -129,12 +157,71 @@ PlayerLaunchContext _testLaunchContext() {
   return PlayerLaunchContext(session: session, source: source);
 }
 
+class _ControllerHarness {
+  _ControllerHarness({
+    required this.database,
+    required this.container,
+    required this.bridge,
+    required this.windowControl,
+    required this.adapter,
+  });
+
+  final AppDatabase database;
+  final ProviderContainer container;
+  final _FakePlayerBridge bridge;
+  final _RecordingWindowControlService windowControl;
+  final _FakeMediaServerAdapter adapter;
+
+  static _ControllerHarness create() {
+    final database = AppDatabase(NativeDatabase.memory());
+    final secureStorage = _FakeSecureStorageService();
+    final preferences = AppPreferencesRepository(database, secureStorage);
+    final playbackRepository = PlaybackStateRepository(database, secureStorage);
+    final serverRepository = ServerLocalRepository(
+      database,
+      preferences,
+      secureStorage,
+    );
+    final bridge = _FakePlayerBridge();
+    final windowControl = _RecordingWindowControlService();
+    final adapter = _FakeMediaServerAdapter();
+
+    final container = ProviderContainer(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(database),
+        secureStorageProvider.overrideWithValue(secureStorage),
+        appPreferencesRepositoryProvider.overrideWithValue(preferences),
+        playbackStateRepositoryProvider.overrideWithValue(playbackRepository),
+        serverLocalRepositoryProvider.overrideWithValue(serverRepository),
+        playerBridgeFactoryProvider.overrideWithValue(() => bridge),
+        windowControlServiceProvider.overrideWithValue(windowControl),
+        mediaServerAdapterProvider.overrideWith((ref, type) => adapter),
+      ],
+    );
+
+    return _ControllerHarness(
+      database: database,
+      container: container,
+      bridge: bridge,
+      windowControl: windowControl,
+      adapter: adapter,
+    );
+  }
+
+  Future<void> dispose() async {
+    container.dispose();
+    await Future<void>.delayed(Duration.zero);
+    await database.close();
+  }
+}
+
 class _FakePlayerBridge implements PlayerBridge {
   PlayerStateSnapshot _state = PlayerStateSnapshot.idle(
     backend: PlayerBackend.mpv,
   );
   final StreamController<PlayerBridgeEvent> _events =
       StreamController<PlayerBridgeEvent>.broadcast();
+  int closeCalls = 0;
 
   @override
   PlayerStateSnapshot get currentState => _state;
@@ -170,12 +257,8 @@ class _FakePlayerBridge implements PlayerBridge {
 
   @override
   Future<void> close() async {
-    emit(
-      const PlayerBridgeEvent(
-        type: PlayerBridgeEventType.shutdown,
-        message: 'mpv window closed.',
-      ),
-    );
+    closeCalls += 1;
+    _state = _state.copyWith(status: PlayerStatus.ready);
   }
 
   @override
@@ -304,23 +387,17 @@ class _FakeMediaServerAdapter implements MediaServerAdapter {
 }
 
 class _RecordingWindowControlService implements WindowControlService {
-  int hideCalls = 0;
-  int showCalls = 0;
-  int presentCalls = 0;
+  int minimizeCalls = 0;
+  int restoreCalls = 0;
 
   @override
-  Future<void> hideMainWindow() async {
-    hideCalls += 1;
+  Future<void> minimizeMainWindow() async {
+    minimizeCalls += 1;
   }
 
   @override
-  Future<void> presentMainWindow() async {
-    presentCalls += 1;
-  }
-
-  @override
-  Future<void> showMainWindow() async {
-    showCalls += 1;
+  Future<void> restoreMainWindow() async {
+    restoreCalls += 1;
   }
 }
 

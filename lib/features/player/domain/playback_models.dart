@@ -11,6 +11,8 @@ enum PlayerBackend { stub, mpv }
 
 enum PlayerPresentationMode { embedded, separateWindow }
 
+enum PlayerLifecycleEvent { none, restoreAndPop }
+
 @freezed
 abstract class PlayerMediaSource with _$PlayerMediaSource {
   const factory PlayerMediaSource({
@@ -44,6 +46,7 @@ abstract class PlayerStateSnapshot with _$PlayerStateSnapshot {
     String? audioTrackId,
     String? errorMessage,
     String? launchError,
+    @Default(PlayerLifecycleEvent.none) PlayerLifecycleEvent lifecycleEvent,
   }) = _PlayerStateSnapshot;
 
   factory PlayerStateSnapshot.fromJson(Map<String, dynamic> json) =>

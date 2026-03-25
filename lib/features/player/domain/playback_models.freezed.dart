@@ -299,7 +299,7 @@ as int,
 /// @nodoc
 mixin _$PlayerStateSnapshot {
 
- PlayerStatus get status; PlayerBackend get backend; PlayerPresentationMode get presentationMode; bool get externalWindowActive; PlayerMediaSource? get source; int get positionSeconds; String? get subtitleTrackId; String? get audioTrackId; String? get errorMessage; String? get launchError;
+ PlayerStatus get status; PlayerBackend get backend; PlayerPresentationMode get presentationMode; bool get externalWindowActive; PlayerMediaSource? get source; int get positionSeconds; String? get subtitleTrackId; String? get audioTrackId; String? get errorMessage; String? get launchError; PlayerLifecycleEvent get lifecycleEvent;
 /// Create a copy of PlayerStateSnapshot
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -312,16 +312,16 @@ $PlayerStateSnapshotCopyWith<PlayerStateSnapshot> get copyWith => _$PlayerStateS
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PlayerStateSnapshot&&(identical(other.status, status) || other.status == status)&&(identical(other.backend, backend) || other.backend == backend)&&(identical(other.presentationMode, presentationMode) || other.presentationMode == presentationMode)&&(identical(other.externalWindowActive, externalWindowActive) || other.externalWindowActive == externalWindowActive)&&(identical(other.source, source) || other.source == source)&&(identical(other.positionSeconds, positionSeconds) || other.positionSeconds == positionSeconds)&&(identical(other.subtitleTrackId, subtitleTrackId) || other.subtitleTrackId == subtitleTrackId)&&(identical(other.audioTrackId, audioTrackId) || other.audioTrackId == audioTrackId)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.launchError, launchError) || other.launchError == launchError));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PlayerStateSnapshot&&(identical(other.status, status) || other.status == status)&&(identical(other.backend, backend) || other.backend == backend)&&(identical(other.presentationMode, presentationMode) || other.presentationMode == presentationMode)&&(identical(other.externalWindowActive, externalWindowActive) || other.externalWindowActive == externalWindowActive)&&(identical(other.source, source) || other.source == source)&&(identical(other.positionSeconds, positionSeconds) || other.positionSeconds == positionSeconds)&&(identical(other.subtitleTrackId, subtitleTrackId) || other.subtitleTrackId == subtitleTrackId)&&(identical(other.audioTrackId, audioTrackId) || other.audioTrackId == audioTrackId)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.launchError, launchError) || other.launchError == launchError)&&(identical(other.lifecycleEvent, lifecycleEvent) || other.lifecycleEvent == lifecycleEvent));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,status,backend,presentationMode,externalWindowActive,source,positionSeconds,subtitleTrackId,audioTrackId,errorMessage,launchError);
+int get hashCode => Object.hash(runtimeType,status,backend,presentationMode,externalWindowActive,source,positionSeconds,subtitleTrackId,audioTrackId,errorMessage,launchError,lifecycleEvent);
 
 @override
 String toString() {
-  return 'PlayerStateSnapshot(status: $status, backend: $backend, presentationMode: $presentationMode, externalWindowActive: $externalWindowActive, source: $source, positionSeconds: $positionSeconds, subtitleTrackId: $subtitleTrackId, audioTrackId: $audioTrackId, errorMessage: $errorMessage, launchError: $launchError)';
+  return 'PlayerStateSnapshot(status: $status, backend: $backend, presentationMode: $presentationMode, externalWindowActive: $externalWindowActive, source: $source, positionSeconds: $positionSeconds, subtitleTrackId: $subtitleTrackId, audioTrackId: $audioTrackId, errorMessage: $errorMessage, launchError: $launchError, lifecycleEvent: $lifecycleEvent)';
 }
 
 
@@ -332,7 +332,7 @@ abstract mixin class $PlayerStateSnapshotCopyWith<$Res>  {
   factory $PlayerStateSnapshotCopyWith(PlayerStateSnapshot value, $Res Function(PlayerStateSnapshot) _then) = _$PlayerStateSnapshotCopyWithImpl;
 @useResult
 $Res call({
- PlayerStatus status, PlayerBackend backend, PlayerPresentationMode presentationMode, bool externalWindowActive, PlayerMediaSource? source, int positionSeconds, String? subtitleTrackId, String? audioTrackId, String? errorMessage, String? launchError
+ PlayerStatus status, PlayerBackend backend, PlayerPresentationMode presentationMode, bool externalWindowActive, PlayerMediaSource? source, int positionSeconds, String? subtitleTrackId, String? audioTrackId, String? errorMessage, String? launchError, PlayerLifecycleEvent lifecycleEvent
 });
 
 
@@ -349,7 +349,7 @@ class _$PlayerStateSnapshotCopyWithImpl<$Res>
 
 /// Create a copy of PlayerStateSnapshot
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? backend = null,Object? presentationMode = null,Object? externalWindowActive = null,Object? source = freezed,Object? positionSeconds = null,Object? subtitleTrackId = freezed,Object? audioTrackId = freezed,Object? errorMessage = freezed,Object? launchError = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? backend = null,Object? presentationMode = null,Object? externalWindowActive = null,Object? source = freezed,Object? positionSeconds = null,Object? subtitleTrackId = freezed,Object? audioTrackId = freezed,Object? errorMessage = freezed,Object? launchError = freezed,Object? lifecycleEvent = null,}) {
   return _then(_self.copyWith(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as PlayerStatus,backend: null == backend ? _self.backend : backend // ignore: cast_nullable_to_non_nullable
@@ -361,7 +361,8 @@ as int,subtitleTrackId: freezed == subtitleTrackId ? _self.subtitleTrackId : sub
 as String?,audioTrackId: freezed == audioTrackId ? _self.audioTrackId : audioTrackId // ignore: cast_nullable_to_non_nullable
 as String?,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
 as String?,launchError: freezed == launchError ? _self.launchError : launchError // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,lifecycleEvent: null == lifecycleEvent ? _self.lifecycleEvent : lifecycleEvent // ignore: cast_nullable_to_non_nullable
+as PlayerLifecycleEvent,
   ));
 }
 /// Create a copy of PlayerStateSnapshot
@@ -458,10 +459,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( PlayerStatus status,  PlayerBackend backend,  PlayerPresentationMode presentationMode,  bool externalWindowActive,  PlayerMediaSource? source,  int positionSeconds,  String? subtitleTrackId,  String? audioTrackId,  String? errorMessage,  String? launchError)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( PlayerStatus status,  PlayerBackend backend,  PlayerPresentationMode presentationMode,  bool externalWindowActive,  PlayerMediaSource? source,  int positionSeconds,  String? subtitleTrackId,  String? audioTrackId,  String? errorMessage,  String? launchError,  PlayerLifecycleEvent lifecycleEvent)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PlayerStateSnapshot() when $default != null:
-return $default(_that.status,_that.backend,_that.presentationMode,_that.externalWindowActive,_that.source,_that.positionSeconds,_that.subtitleTrackId,_that.audioTrackId,_that.errorMessage,_that.launchError);case _:
+return $default(_that.status,_that.backend,_that.presentationMode,_that.externalWindowActive,_that.source,_that.positionSeconds,_that.subtitleTrackId,_that.audioTrackId,_that.errorMessage,_that.launchError,_that.lifecycleEvent);case _:
   return orElse();
 
 }
@@ -479,10 +480,10 @@ return $default(_that.status,_that.backend,_that.presentationMode,_that.external
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( PlayerStatus status,  PlayerBackend backend,  PlayerPresentationMode presentationMode,  bool externalWindowActive,  PlayerMediaSource? source,  int positionSeconds,  String? subtitleTrackId,  String? audioTrackId,  String? errorMessage,  String? launchError)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( PlayerStatus status,  PlayerBackend backend,  PlayerPresentationMode presentationMode,  bool externalWindowActive,  PlayerMediaSource? source,  int positionSeconds,  String? subtitleTrackId,  String? audioTrackId,  String? errorMessage,  String? launchError,  PlayerLifecycleEvent lifecycleEvent)  $default,) {final _that = this;
 switch (_that) {
 case _PlayerStateSnapshot():
-return $default(_that.status,_that.backend,_that.presentationMode,_that.externalWindowActive,_that.source,_that.positionSeconds,_that.subtitleTrackId,_that.audioTrackId,_that.errorMessage,_that.launchError);case _:
+return $default(_that.status,_that.backend,_that.presentationMode,_that.externalWindowActive,_that.source,_that.positionSeconds,_that.subtitleTrackId,_that.audioTrackId,_that.errorMessage,_that.launchError,_that.lifecycleEvent);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -499,10 +500,10 @@ return $default(_that.status,_that.backend,_that.presentationMode,_that.external
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( PlayerStatus status,  PlayerBackend backend,  PlayerPresentationMode presentationMode,  bool externalWindowActive,  PlayerMediaSource? source,  int positionSeconds,  String? subtitleTrackId,  String? audioTrackId,  String? errorMessage,  String? launchError)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( PlayerStatus status,  PlayerBackend backend,  PlayerPresentationMode presentationMode,  bool externalWindowActive,  PlayerMediaSource? source,  int positionSeconds,  String? subtitleTrackId,  String? audioTrackId,  String? errorMessage,  String? launchError,  PlayerLifecycleEvent lifecycleEvent)?  $default,) {final _that = this;
 switch (_that) {
 case _PlayerStateSnapshot() when $default != null:
-return $default(_that.status,_that.backend,_that.presentationMode,_that.externalWindowActive,_that.source,_that.positionSeconds,_that.subtitleTrackId,_that.audioTrackId,_that.errorMessage,_that.launchError);case _:
+return $default(_that.status,_that.backend,_that.presentationMode,_that.externalWindowActive,_that.source,_that.positionSeconds,_that.subtitleTrackId,_that.audioTrackId,_that.errorMessage,_that.launchError,_that.lifecycleEvent);case _:
   return null;
 
 }
@@ -514,7 +515,7 @@ return $default(_that.status,_that.backend,_that.presentationMode,_that.external
 @JsonSerializable()
 
 class _PlayerStateSnapshot extends PlayerStateSnapshot {
-  const _PlayerStateSnapshot({required this.status, required this.backend, this.presentationMode = PlayerPresentationMode.embedded, this.externalWindowActive = false, this.source, this.positionSeconds = 0, this.subtitleTrackId, this.audioTrackId, this.errorMessage, this.launchError}): super._();
+  const _PlayerStateSnapshot({required this.status, required this.backend, this.presentationMode = PlayerPresentationMode.embedded, this.externalWindowActive = false, this.source, this.positionSeconds = 0, this.subtitleTrackId, this.audioTrackId, this.errorMessage, this.launchError, this.lifecycleEvent = PlayerLifecycleEvent.none}): super._();
   factory _PlayerStateSnapshot.fromJson(Map<String, dynamic> json) => _$PlayerStateSnapshotFromJson(json);
 
 @override final  PlayerStatus status;
@@ -527,6 +528,7 @@ class _PlayerStateSnapshot extends PlayerStateSnapshot {
 @override final  String? audioTrackId;
 @override final  String? errorMessage;
 @override final  String? launchError;
+@override@JsonKey() final  PlayerLifecycleEvent lifecycleEvent;
 
 /// Create a copy of PlayerStateSnapshot
 /// with the given fields replaced by the non-null parameter values.
@@ -541,16 +543,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PlayerStateSnapshot&&(identical(other.status, status) || other.status == status)&&(identical(other.backend, backend) || other.backend == backend)&&(identical(other.presentationMode, presentationMode) || other.presentationMode == presentationMode)&&(identical(other.externalWindowActive, externalWindowActive) || other.externalWindowActive == externalWindowActive)&&(identical(other.source, source) || other.source == source)&&(identical(other.positionSeconds, positionSeconds) || other.positionSeconds == positionSeconds)&&(identical(other.subtitleTrackId, subtitleTrackId) || other.subtitleTrackId == subtitleTrackId)&&(identical(other.audioTrackId, audioTrackId) || other.audioTrackId == audioTrackId)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.launchError, launchError) || other.launchError == launchError));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PlayerStateSnapshot&&(identical(other.status, status) || other.status == status)&&(identical(other.backend, backend) || other.backend == backend)&&(identical(other.presentationMode, presentationMode) || other.presentationMode == presentationMode)&&(identical(other.externalWindowActive, externalWindowActive) || other.externalWindowActive == externalWindowActive)&&(identical(other.source, source) || other.source == source)&&(identical(other.positionSeconds, positionSeconds) || other.positionSeconds == positionSeconds)&&(identical(other.subtitleTrackId, subtitleTrackId) || other.subtitleTrackId == subtitleTrackId)&&(identical(other.audioTrackId, audioTrackId) || other.audioTrackId == audioTrackId)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.launchError, launchError) || other.launchError == launchError)&&(identical(other.lifecycleEvent, lifecycleEvent) || other.lifecycleEvent == lifecycleEvent));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,status,backend,presentationMode,externalWindowActive,source,positionSeconds,subtitleTrackId,audioTrackId,errorMessage,launchError);
+int get hashCode => Object.hash(runtimeType,status,backend,presentationMode,externalWindowActive,source,positionSeconds,subtitleTrackId,audioTrackId,errorMessage,launchError,lifecycleEvent);
 
 @override
 String toString() {
-  return 'PlayerStateSnapshot(status: $status, backend: $backend, presentationMode: $presentationMode, externalWindowActive: $externalWindowActive, source: $source, positionSeconds: $positionSeconds, subtitleTrackId: $subtitleTrackId, audioTrackId: $audioTrackId, errorMessage: $errorMessage, launchError: $launchError)';
+  return 'PlayerStateSnapshot(status: $status, backend: $backend, presentationMode: $presentationMode, externalWindowActive: $externalWindowActive, source: $source, positionSeconds: $positionSeconds, subtitleTrackId: $subtitleTrackId, audioTrackId: $audioTrackId, errorMessage: $errorMessage, launchError: $launchError, lifecycleEvent: $lifecycleEvent)';
 }
 
 
@@ -561,7 +563,7 @@ abstract mixin class _$PlayerStateSnapshotCopyWith<$Res> implements $PlayerState
   factory _$PlayerStateSnapshotCopyWith(_PlayerStateSnapshot value, $Res Function(_PlayerStateSnapshot) _then) = __$PlayerStateSnapshotCopyWithImpl;
 @override @useResult
 $Res call({
- PlayerStatus status, PlayerBackend backend, PlayerPresentationMode presentationMode, bool externalWindowActive, PlayerMediaSource? source, int positionSeconds, String? subtitleTrackId, String? audioTrackId, String? errorMessage, String? launchError
+ PlayerStatus status, PlayerBackend backend, PlayerPresentationMode presentationMode, bool externalWindowActive, PlayerMediaSource? source, int positionSeconds, String? subtitleTrackId, String? audioTrackId, String? errorMessage, String? launchError, PlayerLifecycleEvent lifecycleEvent
 });
 
 
@@ -578,7 +580,7 @@ class __$PlayerStateSnapshotCopyWithImpl<$Res>
 
 /// Create a copy of PlayerStateSnapshot
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? backend = null,Object? presentationMode = null,Object? externalWindowActive = null,Object? source = freezed,Object? positionSeconds = null,Object? subtitleTrackId = freezed,Object? audioTrackId = freezed,Object? errorMessage = freezed,Object? launchError = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? backend = null,Object? presentationMode = null,Object? externalWindowActive = null,Object? source = freezed,Object? positionSeconds = null,Object? subtitleTrackId = freezed,Object? audioTrackId = freezed,Object? errorMessage = freezed,Object? launchError = freezed,Object? lifecycleEvent = null,}) {
   return _then(_PlayerStateSnapshot(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as PlayerStatus,backend: null == backend ? _self.backend : backend // ignore: cast_nullable_to_non_nullable
@@ -590,7 +592,8 @@ as int,subtitleTrackId: freezed == subtitleTrackId ? _self.subtitleTrackId : sub
 as String?,audioTrackId: freezed == audioTrackId ? _self.audioTrackId : audioTrackId // ignore: cast_nullable_to_non_nullable
 as String?,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
 as String?,launchError: freezed == launchError ? _self.launchError : launchError // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,lifecycleEvent: null == lifecycleEvent ? _self.lifecycleEvent : lifecycleEvent // ignore: cast_nullable_to_non_nullable
+as PlayerLifecycleEvent,
   ));
 }
 

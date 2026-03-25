@@ -50,6 +50,12 @@ _PlayerStateSnapshot _$PlayerStateSnapshotFromJson(Map<String, dynamic> json) =>
       audioTrackId: json['audioTrackId'] as String?,
       errorMessage: json['errorMessage'] as String?,
       launchError: json['launchError'] as String?,
+      lifecycleEvent:
+          $enumDecodeNullable(
+            _$PlayerLifecycleEventEnumMap,
+            json['lifecycleEvent'],
+          ) ??
+          PlayerLifecycleEvent.none,
     );
 
 Map<String, dynamic> _$PlayerStateSnapshotToJson(
@@ -66,6 +72,7 @@ Map<String, dynamic> _$PlayerStateSnapshotToJson(
   'audioTrackId': instance.audioTrackId,
   'errorMessage': instance.errorMessage,
   'launchError': instance.launchError,
+  'lifecycleEvent': _$PlayerLifecycleEventEnumMap[instance.lifecycleEvent]!,
 };
 
 const _$PlayerStatusEnumMap = {
@@ -85,6 +92,11 @@ const _$PlayerBackendEnumMap = {
 const _$PlayerPresentationModeEnumMap = {
   PlayerPresentationMode.embedded: 'embedded',
   PlayerPresentationMode.separateWindow: 'separateWindow',
+};
+
+const _$PlayerLifecycleEventEnumMap = {
+  PlayerLifecycleEvent.none: 'none',
+  PlayerLifecycleEvent.restoreAndPop: 'restoreAndPop',
 };
 
 _PlaybackReport _$PlaybackReportFromJson(Map<String, dynamic> json) =>

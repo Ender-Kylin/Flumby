@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/native.dart';
 import 'package:flumby/core/database/app_database.dart';
 import 'package:flumby/core/storage/app_preferences_repository.dart';
@@ -36,7 +38,7 @@ void main() {
         .setOpenInSeparateWindow(false);
     await writerContainer
         .read(settingsControllerProvider.notifier)
-        .setHideMainWindowDuringExternalPlayback(false);
+        .setMinimizeMainWindowDuringExternalPlayback(false);
 
     final readerContainer = ProviderContainer(
       overrides: [
@@ -55,7 +57,57 @@ void main() {
     expect(state.hardwareDecoding, 'no');
     expect(state.subtitleLanguage, 'chi');
     expect(state.openInSeparateWindow, isFalse);
-    expect(state.hideMainWindowDuringExternalPlayback, isFalse);
+    expect(state.minimizeMainWindowDuringExternalPlayback, isFalse);
+  });
+
+  test(
+    'settings migrate legacy hide preference to minimize preference',
+    () async {
+      final database = AppDatabase(NativeDatabase.memory());
+      final secureStorage = _FakeSecureStorageService();
+      final preferences = AppPreferencesRepository(database, secureStorage);
+
+      addTearDown(database.close);
+
+      await preferences.writeBool(
+        SettingsController.legacyHideMainWindowDuringExternalPlaybackKey,
+        false,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          appPreferencesRepositoryProvider.overrideWithValue(preferences),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      SettingsState state = container.read(settingsControllerProvider);
+      while (!state.isHydrated) {
+        await Future<void>.delayed(Duration.zero);
+        state = container.read(settingsControllerProvider);
+      }
+
+      expect(state.minimizeMainWindowDuringExternalPlayback, isFalse);
+      expect(
+        await preferences.readBool(
+          SettingsController.minimizeMainWindowDuringExternalPlaybackKey,
+        ),
+        isFalse,
+      );
+      expect(
+        await preferences.readBool(
+          SettingsController.legacyHideMainWindowDuringExternalPlaybackKey,
+        ),
+        isNull,
+      );
+    },
+  );
+
+  test('linux defaults separate-window minimization to true', () {
+    final defaults = SettingsState.defaults();
+
+    expect(defaults.openInSeparateWindow, Platform.isLinux);
+    expect(defaults.minimizeMainWindowDuringExternalPlayback, Platform.isLinux);
   });
 }
 

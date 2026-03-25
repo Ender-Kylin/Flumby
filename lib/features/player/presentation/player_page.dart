@@ -127,10 +127,26 @@ class _PlayerView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(playerControllerProvider(launchContext));
-    final controller = ref.read(
-      playerControllerProvider(launchContext).notifier,
-    );
+    final playerProvider = playerControllerProvider(launchContext);
+    ref.listen<PlayerStateSnapshot>(playerProvider, (previous, next) {
+      if (next.lifecycleEvent != PlayerLifecycleEvent.restoreAndPop ||
+          previous?.lifecycleEvent == PlayerLifecycleEvent.restoreAndPop) {
+        return;
+      }
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) {
+          return;
+        }
+
+        ref.read(playerProvider.notifier).consumeLifecycleEvent();
+        if (Navigator.of(context).canPop()) {
+          context.pop();
+        }
+      });
+    });
+    final state = ref.watch(playerProvider);
+    final controller = ref.read(playerProvider.notifier);
     final source = launchContext.source;
     final isSeparateWindow = state.isSeparateWindow;
     final maxSeconds = math.max(
@@ -218,14 +234,6 @@ class _PlayerView extends ConsumerWidget {
                       icon: Icon(actionIcon),
                       label: Text(actionLabel),
                     ),
-                    if (isSeparateWindow)
-                      OutlinedButton.icon(
-                        onPressed: state.externalWindowActive
-                            ? controller.closePlaybackWindow
-                            : null,
-                        icon: const Icon(Icons.close_rounded),
-                        label: const Text('Close Window'),
-                      ),
                     if (!isSeparateWindow) ...[
                       OutlinedButton(
                         onPressed: () =>
@@ -343,7 +351,7 @@ String _buildPlaybackMessage(PlayerStateSnapshot state) {
       return 'Playback is running in a separate mpv window. Flumby will restore itself when that window closes.';
     }
 
-    return 'Flumby launches Linux playback in a separate mpv window. The Play button here reopens that window if needed.';
+    return 'Flumby launches Linux playback in a separate mpv window and minimizes to the taskbar once the stream is loaded. The Play button here reopens that window if needed.';
   }
 
   return state.errorMessage ??

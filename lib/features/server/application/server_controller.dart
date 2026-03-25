@@ -32,31 +32,46 @@ final serverByIdProvider = Provider.family<MediaServerProfile?, String>((
   return null;
 });
 
+final serverSessionRevisionProvider = Provider<int>((ref) {
+  return ref.watch(
+    serverControllerProvider.select((state) => state.sessionRevision),
+  );
+});
+
 final activeServerSessionProvider = FutureProvider<MediaServerSession?>((
   ref,
 ) async {
   final server = ref.watch(activeServerProvider);
+  ref.watch(serverSessionRevisionProvider);
   if (server == null) {
     return null;
   }
 
-  return ref.watch(serverLocalRepositoryProvider).loadSession(server);
+  return ref.read(serverLocalRepositoryProvider).loadSession(server);
 });
 
 final serverSessionProvider =
     FutureProvider.family<MediaServerSession?, String>((ref, serverId) async {
-      return ref.watch(serverLocalRepositoryProvider).loadSessionById(serverId);
+      ref.watch(serverSessionRevisionProvider);
+      final server = ref.watch(serverByIdProvider(serverId));
+      if (server == null) {
+        return null;
+      }
+
+      return ref.read(serverLocalRepositoryProvider).loadSession(server);
     });
 
 class ServerRegistryState {
   const ServerRegistryState({
     this.servers = const [],
     this.activeServerId,
+    this.sessionRevision = 0,
     this.isLoading = true,
   });
 
   final List<MediaServerProfile> servers;
   final String? activeServerId;
+  final int sessionRevision;
   final bool isLoading;
 
   MediaServerProfile? get activeServer {
@@ -79,6 +94,8 @@ class ServerRegistryState {
     List<MediaServerProfile>? servers,
     String? activeServerId,
     bool clearActiveServerId = false,
+    int? sessionRevision,
+    bool bumpSessionRevision = false,
     bool? isLoading,
   }) {
     return ServerRegistryState(
@@ -86,6 +103,9 @@ class ServerRegistryState {
       activeServerId: clearActiveServerId
           ? null
           : activeServerId ?? this.activeServerId,
+      sessionRevision: bumpSessionRevision
+          ? this.sessionRevision + 1
+          : sessionRevision ?? this.sessionRevision,
       isLoading: isLoading ?? this.isLoading,
     );
   }
@@ -123,14 +143,15 @@ class ServerController extends Notifier<ServerRegistryState> {
     state = state.copyWith(
       servers: nextServers,
       activeServerId: nextActiveServerId,
+      bumpSessionRevision: true,
       isLoading: false,
     );
-    _invalidateSessionProviders(session.server.id);
   }
 
   Future<void> upsertServer(
     MediaServerProfile server, {
     bool makeActive = false,
+    bool bumpSessionRevision = false,
   }) async {
     final repository = ref.read(serverLocalRepositoryProvider);
     await repository.saveServer(server);
@@ -145,9 +166,9 @@ class ServerController extends Notifier<ServerRegistryState> {
     state = state.copyWith(
       servers: nextServers,
       activeServerId: nextActiveServerId,
+      bumpSessionRevision: bumpSessionRevision,
       isLoading: false,
     );
-    _invalidateSessionProviders(server.id);
   }
 
   Future<void> setActiveServer(String serverId) async {
@@ -162,7 +183,6 @@ class ServerController extends Notifier<ServerRegistryState> {
       activeServerId: nextActiveServerId,
       isLoading: false,
     );
-    ref.invalidate(activeServerSessionProvider);
   }
 
   Future<void> removeServer(String serverId) async {
@@ -182,9 +202,9 @@ class ServerController extends Notifier<ServerRegistryState> {
     state = state.copyWith(
       servers: nextServers,
       activeServerId: nextActiveServerId,
+      bumpSessionRevision: true,
       isLoading: false,
     );
-    _invalidateSessionProviders(serverId);
   }
 
   Future<void> clearCredentials(String serverId) async {
@@ -195,9 +215,10 @@ class ServerController extends Notifier<ServerRegistryState> {
     if (server != null) {
       await upsertServer(
         server.copyWith(isOnline: false, updatedAt: DateTime.now().toUtc()),
+        bumpSessionRevision: true,
       );
     } else {
-      _invalidateSessionProviders(serverId);
+      state = state.copyWith(bumpSessionRevision: true, isLoading: false);
     }
   }
 
@@ -213,7 +234,6 @@ class ServerController extends Notifier<ServerRegistryState> {
       ),
       isLoading: false,
     );
-    ref.invalidate(activeServerSessionProvider);
   }
 
   List<MediaServerProfile> _upsertLocalServer(MediaServerProfile server) {
@@ -244,10 +264,5 @@ class ServerController extends Notifier<ServerRegistryState> {
       return preferredActiveServerId;
     }
     return servers.first.id;
-  }
-
-  void _invalidateSessionProviders(String serverId) {
-    ref.invalidate(serverSessionProvider(serverId));
-    ref.invalidate(activeServerSessionProvider);
   }
 }

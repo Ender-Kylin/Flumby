@@ -127,14 +127,14 @@ class SettingsPage extends ConsumerWidget {
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text(
-                      'Hide Flumby while external playback runs',
+                      'Minimize Flumby during external playback',
                     ),
                     subtitle: const Text(
-                      'The main window returns automatically when playback ends or closes.',
+                      'Flumby minimizes to the taskbar and restores itself when playback ends or closes.',
                     ),
-                    value: state.hideMainWindowDuringExternalPlayback,
+                    value: state.minimizeMainWindowDuringExternalPlayback,
                     onChanged:
-                        controller.setHideMainWindowDuringExternalPlayback,
+                        controller.setMinimizeMainWindowDuringExternalPlayback,
                   ),
                 ],
               ],

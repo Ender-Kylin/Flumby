@@ -16,7 +16,7 @@ class SettingsState {
     this.subtitleLanguage = 'eng',
     this.audioLanguage = 'jpn',
     this.openInSeparateWindow = false,
-    this.hideMainWindowDuringExternalPlayback = false,
+    this.minimizeMainWindowDuringExternalPlayback = false,
     this.isHydrated = false,
   });
 
@@ -24,7 +24,7 @@ class SettingsState {
     final linuxSeparateWindowDefault = Platform.isLinux;
     return SettingsState(
       openInSeparateWindow: linuxSeparateWindowDefault,
-      hideMainWindowDuringExternalPlayback: false,
+      minimizeMainWindowDuringExternalPlayback: linuxSeparateWindowDefault,
     );
   }
 
@@ -34,7 +34,7 @@ class SettingsState {
   final String subtitleLanguage;
   final String audioLanguage;
   final bool openInSeparateWindow;
-  final bool hideMainWindowDuringExternalPlayback;
+  final bool minimizeMainWindowDuringExternalPlayback;
   final bool isHydrated;
 
   SettingsState copyWith({
@@ -44,7 +44,7 @@ class SettingsState {
     String? subtitleLanguage,
     String? audioLanguage,
     bool? openInSeparateWindow,
-    bool? hideMainWindowDuringExternalPlayback,
+    bool? minimizeMainWindowDuringExternalPlayback,
     bool? isHydrated,
   }) {
     return SettingsState(
@@ -54,9 +54,9 @@ class SettingsState {
       subtitleLanguage: subtitleLanguage ?? this.subtitleLanguage,
       audioLanguage: audioLanguage ?? this.audioLanguage,
       openInSeparateWindow: openInSeparateWindow ?? this.openInSeparateWindow,
-      hideMainWindowDuringExternalPlayback:
-          hideMainWindowDuringExternalPlayback ??
-          this.hideMainWindowDuringExternalPlayback,
+      minimizeMainWindowDuringExternalPlayback:
+          minimizeMainWindowDuringExternalPlayback ??
+          this.minimizeMainWindowDuringExternalPlayback,
       isHydrated: isHydrated ?? this.isHydrated,
     );
   }
@@ -69,7 +69,9 @@ class SettingsController extends Notifier<SettingsState> {
   static const subtitleLanguageKey = 'player.subtitleLanguage';
   static const audioLanguageKey = 'player.audioLanguage';
   static const openInSeparateWindowKey = 'player.openInSeparateWindow';
-  static const hideMainWindowDuringExternalPlaybackKey =
+  static const minimizeMainWindowDuringExternalPlaybackKey =
+      'player.minimizeMainWindowDuringExternalPlayback';
+  static const legacyHideMainWindowDuringExternalPlaybackKey =
       'player.hideMainWindowDuringExternalPlayback';
 
   bool _hydrating = false;
@@ -125,16 +127,35 @@ class SettingsController extends Notifier<SettingsState> {
         .writeBool(openInSeparateWindowKey, value);
   }
 
-  Future<void> setHideMainWindowDuringExternalPlayback(bool value) async {
-    state = state.copyWith(hideMainWindowDuringExternalPlayback: value);
+  Future<void> setMinimizeMainWindowDuringExternalPlayback(bool value) async {
+    state = state.copyWith(minimizeMainWindowDuringExternalPlayback: value);
     await ref
         .read(appPreferencesRepositoryProvider)
-        .writeBool(hideMainWindowDuringExternalPlaybackKey, value);
+        .writeBool(minimizeMainWindowDuringExternalPlaybackKey, value);
   }
 
   Future<void> _hydrate() async {
     final repository = ref.read(appPreferencesRepositoryProvider);
     final defaults = SettingsState.defaults();
+    final storedMinimizePreference = await repository.readBool(
+      minimizeMainWindowDuringExternalPlaybackKey,
+    );
+    final legacyMinimizePreference = await repository.readBool(
+      legacyHideMainWindowDuringExternalPlaybackKey,
+    );
+    final migratedMinimizePreference =
+        storedMinimizePreference ??
+        legacyMinimizePreference ??
+        defaults.minimizeMainWindowDuringExternalPlayback;
+
+    if (storedMinimizePreference == null && legacyMinimizePreference != null) {
+      await repository.writeBool(
+        minimizeMainWindowDuringExternalPlaybackKey,
+        legacyMinimizePreference,
+      );
+      await repository.delete(legacyHideMainWindowDuringExternalPlaybackKey);
+    }
+
     state = SettingsState(
       webDavEnabled:
           await repository.readBool(webDavEnabledKey) ?? defaults.webDavEnabled,
@@ -153,9 +174,7 @@ class SettingsController extends Notifier<SettingsState> {
       openInSeparateWindow:
           await repository.readBool(openInSeparateWindowKey) ??
           defaults.openInSeparateWindow,
-      hideMainWindowDuringExternalPlayback:
-          await repository.readBool(hideMainWindowDuringExternalPlaybackKey) ??
-          defaults.hideMainWindowDuringExternalPlayback,
+      minimizeMainWindowDuringExternalPlayback: migratedMinimizePreference,
       isHydrated: true,
     );
   }

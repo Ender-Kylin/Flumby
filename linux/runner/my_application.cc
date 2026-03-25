@@ -22,18 +22,14 @@ static FlMethodResponse* handle_window_control_method(MyApplication* self,
     return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
   }
 
-  if (g_strcmp0(method, "hideMainWindow") == 0) {
-    gtk_widget_hide(GTK_WIDGET(self->window));
+  if (g_strcmp0(method, "minimizeMainWindow") == 0) {
+    gtk_window_iconify(self->window);
     return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
   }
 
-  if (g_strcmp0(method, "showMainWindow") == 0) {
+  if (g_strcmp0(method, "restoreMainWindow") == 0) {
     gtk_widget_show(GTK_WIDGET(self->window));
-    return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
-  }
-
-  if (g_strcmp0(method, "presentMainWindow") == 0) {
-    gtk_widget_show(GTK_WIDGET(self->window));
+    gtk_window_deiconify(self->window);
     gtk_window_present(self->window);
     return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
   }
