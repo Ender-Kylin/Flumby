@@ -1,0 +1,11 @@
+prefix=/usr
+includedir=${prefix}/include
+libdir=${prefix}/lib
+
+Name: libsixel
+Description: A lightweight, fast C implementation of DEC SIXEL graphics codec
+Version: 1.10.5
+Requires.private: libcurl, libjpeg, libpng, gdk-pixbuf-2.0
+Libs: -L${libdir} -lsixel
+Libs.private: -lm
+Cflags: -I${includedir}

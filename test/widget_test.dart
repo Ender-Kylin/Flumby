@@ -1,30 +1,72 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+import 'dart:ui';
 
-import 'package:flutter/material.dart';
+import 'package:flumby/app/flumby_app.dart';
+import 'package:flumby/features/server/application/server_controller.dart';
+import 'package:flumby/features/server/domain/server_models.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:flumby/main.dart';
-
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('app boots into the server setup shell when no server exists', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          serverControllerProvider.overrideWith(_EmptyServerController.new),
+        ],
+        child: const FlumbyApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('No media servers configured'), findsOneWidget);
   });
+
+  testWidgets('server cards do not overflow on narrow layouts', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(820, 640);
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          serverControllerProvider.overrideWith(_TestServerController.new),
+        ],
+        child: const FlumbyApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reachable'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+class _EmptyServerController extends ServerController {
+  @override
+  ServerRegistryState build() {
+    return const ServerRegistryState(isLoading: false);
+  }
+}
+
+class _TestServerController extends ServerController {
+  @override
+  ServerRegistryState build() {
+    return ServerRegistryState(
+      isLoading: false,
+      activeServerId: 'emby-test',
+      servers: [
+        MediaServerProfile(
+          id: 'emby-test',
+          name: 'Local Emby',
+          baseUrl: 'http://127.0.0.1:8096',
+          type: MediaServerType.emby,
+          username: 'tester',
+          isOnline: true,
+          updatedAt: DateTime.utc(2026, 3, 25, 12),
+        ),
+      ],
+    );
+  }
 }

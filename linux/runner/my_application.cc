@@ -10,9 +10,62 @@
 struct _MyApplication {
   GtkApplication parent_instance;
   char** dart_entrypoint_arguments;
+  GtkWindow* window;
+  FlMethodChannel* window_control_channel;
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
+
+static FlMethodResponse* handle_window_control_method(MyApplication* self,
+                                                      const gchar* method) {
+  if (self->window == nullptr) {
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
+  }
+
+  if (g_strcmp0(method, "hideMainWindow") == 0) {
+    gtk_widget_hide(GTK_WIDGET(self->window));
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
+  }
+
+  if (g_strcmp0(method, "showMainWindow") == 0) {
+    gtk_widget_show(GTK_WIDGET(self->window));
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
+  }
+
+  if (g_strcmp0(method, "presentMainWindow") == 0) {
+    gtk_widget_show(GTK_WIDGET(self->window));
+    gtk_window_present(self->window);
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
+  }
+
+  return FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+}
+
+static void window_control_method_call_cb(FlMethodChannel* channel,
+                                          FlMethodCall* method_call,
+                                          gpointer user_data) {
+  MyApplication* self = MY_APPLICATION(user_data);
+  const gchar* method = fl_method_call_get_name(method_call);
+  g_autoptr(FlMethodResponse) response =
+      handle_window_control_method(self, method);
+
+  g_autoptr(GError) error = nullptr;
+  if (!fl_method_call_respond(method_call, response, &error)) {
+    g_warning("Failed to send window control response: %s", error->message);
+  }
+}
+
+static void create_channels(MyApplication* self, FlView* view) {
+  FlEngine* engine = fl_view_get_engine(view);
+  FlBinaryMessenger* messenger = fl_engine_get_binary_messenger(engine);
+  g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
+
+  self->window_control_channel = fl_method_channel_new(
+      messenger, "flumby/window_control", FL_METHOD_CODEC(codec));
+  fl_method_channel_set_method_call_handler(self->window_control_channel,
+                                            window_control_method_call_cb,
+                                            self, nullptr);
+}
 
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
@@ -22,7 +75,7 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
-  GtkWindow* window =
+  self->window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
 
   // Use a header bar when running in GNOME as this is the common style used
@@ -34,7 +87,7 @@ static void my_application_activate(GApplication* application) {
   // if future cases occur).
   gboolean use_header_bar = TRUE;
 #ifdef GDK_WINDOWING_X11
-  GdkScreen* screen = gtk_window_get_screen(window);
+  GdkScreen* screen = gtk_window_get_screen(self->window);
   if (GDK_IS_X11_SCREEN(screen)) {
     const gchar* wm_name = gdk_x11_screen_get_window_manager_name(screen);
     if (g_strcmp0(wm_name, "GNOME Shell") != 0) {
@@ -47,12 +100,12 @@ static void my_application_activate(GApplication* application) {
     gtk_widget_show(GTK_WIDGET(header_bar));
     gtk_header_bar_set_title(header_bar, "flumby");
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
-    gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
+    gtk_window_set_titlebar(self->window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "flumby");
+    gtk_window_set_title(self->window, "flumby");
   }
 
-  gtk_window_set_default_size(window, 1280, 720);
+  gtk_window_set_default_size(self->window, 1280, 720);
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
@@ -65,7 +118,7 @@ static void my_application_activate(GApplication* application) {
   gdk_rgba_parse(&background_color, "#000000");
   fl_view_set_background_color(view, &background_color);
   gtk_widget_show(GTK_WIDGET(view));
-  gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
+  gtk_container_add(GTK_CONTAINER(self->window), GTK_WIDGET(view));
 
   // Show the window when Flutter renders.
   // Requires the view to be realized so we can start rendering.
@@ -73,6 +126,7 @@ static void my_application_activate(GApplication* application) {
                            self);
   gtk_widget_realize(GTK_WIDGET(view));
 
+  create_channels(self, view);
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
@@ -121,6 +175,7 @@ static void my_application_shutdown(GApplication* application) {
 static void my_application_dispose(GObject* object) {
   MyApplication* self = MY_APPLICATION(object);
   g_clear_pointer(&self->dart_entrypoint_arguments, g_strfreev);
+  g_clear_object(&self->window_control_channel);
   G_OBJECT_CLASS(my_application_parent_class)->dispose(object);
 }
 
