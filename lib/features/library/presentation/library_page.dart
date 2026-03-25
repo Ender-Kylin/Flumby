@@ -62,13 +62,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         children: [
           EmptyStateCard(
             icon: Icons.video_library_outlined,
-            title: 'No library data available',
+            title: '暂无媒体库数据',
             description:
-                'Connect to an Emby server before opening libraries and browsing items.',
+                '请先连接 Emby 服务器，再打开媒体库浏览内容。',
             action: FilledButton.icon(
               onPressed: () => context.go('/servers'),
               icon: const Icon(Icons.storage_rounded),
-              label: const Text('Open servers'),
+              label: const Text('打开服务器'),
             ),
           ),
         ],
@@ -84,20 +84,20 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         switch (activeSession) {
           AsyncLoading() => const Center(child: CircularProgressIndicator()),
           AsyncError(:final error) => _LibraryFailureCard(
-            title: 'Library login check failed',
+            title: '媒体库登录检查失败',
             error: error,
           ),
           AsyncData(:final value) =>
             value == null
                 ? EmptyStateCard(
                     icon: Icons.lock_outline_rounded,
-                    title: 'Login required',
+                    title: '需要登录',
                     description:
-                        'The active server no longer has saved credentials. Reconnect it from the servers page first.',
+                        '当前服务器已没有保存的凭据，请先到服务器页面重新连接。',
                     action: FilledButton.icon(
                       onPressed: () => context.go('/servers'),
                       icon: const Icon(Icons.storage_rounded),
-                      label: const Text('Open servers'),
+                      label: const Text('打开服务器'),
                     ),
                   )
                 : _LibraryBody(
@@ -137,14 +137,14 @@ class _LibraryHero extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${server.name} libraries',
+              '${server.name} 的媒体库',
               style: Theme.of(
                 context,
               ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
             Text(
-              'Pick a library strip, then browse its movies, episodes, and videos in a poster grid.',
+              '先选择一个媒体库，再以海报网格浏览其中的电影、剧集和视频。',
               style: Theme.of(
                 context,
               ).textTheme.bodyLarge?.copyWith(color: Colors.white70),
@@ -174,14 +174,14 @@ class _LibraryBody extends ConsumerWidget {
     return switch (libraries) {
       AsyncLoading() => const Center(child: CircularProgressIndicator()),
       AsyncError(:final error) => _LibraryFailureCard(
-        title: 'Library list failed',
+        title: '媒体库列表获取失败',
         error: error,
       ),
       AsyncData(:final value) when value.isEmpty => const EmptyStateCard(
         icon: Icons.video_library_outlined,
-        title: 'No libraries returned',
+        title: '未返回媒体库',
         description:
-            'Emby did not return any libraries for the current account.',
+            'Emby 当前账号没有返回任何媒体库。',
       ),
       AsyncData(:final value) => _LibraryItemsView(
         libraries: value,
@@ -230,7 +230,7 @@ class _LibraryItemsView extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Libraries',
+          '媒体库',
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
@@ -246,7 +246,7 @@ class _LibraryItemsView extends ConsumerWidget {
               final library = libraries[index];
               return LibrarySelectionCard(
                 title: library.title,
-                subtitle: '${library.itemCount} items',
+                subtitle: '${library.itemCount} 项',
                 imageUrl: library.libraryImageUrl,
                 isSelected: library.id == selectedLibraryId,
                 onTap: () => onLibrarySelected(library.id),
@@ -263,7 +263,7 @@ class _LibraryItemsView extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          '${selectedLibrary.itemCount} entries available on this library view.',
+          '当前媒体库视图共有 ${selectedLibrary.itemCount} 项内容。',
           style: Theme.of(
             context,
           ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
@@ -272,14 +272,14 @@ class _LibraryItemsView extends ConsumerWidget {
         switch (items) {
           AsyncLoading() => const Center(child: CircularProgressIndicator()),
           AsyncError(:final error) => _LibraryFailureCard(
-            title: 'Library items failed',
+            title: '媒体库内容获取失败',
             error: error,
           ),
           AsyncData(:final value) when value.isEmpty => const EmptyStateCard(
             icon: Icons.movie_outlined,
-            title: 'No playable items in this library',
+            title: '该媒体库没有可播放内容',
             description:
-                'Only movie, episode, and video items are shown in the first Emby pass.',
+                '当前版本仅显示电影、剧集和视频类型内容。',
           ),
           AsyncData(:final value) => MediaPosterGrid(
             items: value,
@@ -308,7 +308,7 @@ class _LibraryFailureCard extends StatelessWidget {
         ? error as DioException
         : null;
     final description = dioError != null
-        ? 'Emby request failed with HTTP ${dioError.response?.statusCode ?? 'unknown'}.'
+          ? 'Emby 请求失败，HTTP 状态码为 ${dioError.response?.statusCode ?? '未知'}。'
         : error.toString();
 
     return EmptyStateCard(

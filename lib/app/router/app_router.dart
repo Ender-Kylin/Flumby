@@ -81,17 +81,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final scaffold = Scaffold(
         appBar: DesktopWindowFrame.isEnabled
             ? null
-            : AppBar(title: const Text('Route Error')),
+            : AppBar(title: const Text('路由错误')),
         body: Center(
           child: Text(
-            state.error?.toString() ?? 'Unknown navigation error',
+            state.error?.toString() ?? '未知的导航错误',
             textAlign: TextAlign.center,
           ),
         ),
       );
 
       return DesktopWindowFrame(
-        title: 'Route Error',
+        title: '路由错误',
         showBackButton: true,
         child: scaffold,
       );

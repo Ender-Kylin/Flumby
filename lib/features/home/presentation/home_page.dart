@@ -44,13 +44,13 @@ class HomePage extends ConsumerWidget {
         children: [
           EmptyStateCard(
             icon: Icons.home_outlined,
-            title: 'No server connected',
+            title: '尚未连接服务器',
             description:
-                'Connect and sign in to an Emby server before browsing the home feed.',
+                '请先连接并登录 Emby 服务器，再浏览首页内容。',
             action: FilledButton.icon(
               onPressed: () => context.go('/servers'),
               icon: const Icon(Icons.storage_rounded),
-              label: const Text('Open servers'),
+              label: const Text('打开服务器'),
             ),
           ),
         ],
@@ -69,13 +69,13 @@ class HomePage extends ConsumerWidget {
           AsyncError(:final error) => _HomeFailureCard(error: error),
           AsyncData(:final value) when value == null => EmptyStateCard(
             icon: Icons.lock_outline_rounded,
-            title: 'Login required',
+            title: '需要登录',
             description:
-                'The active server no longer has saved credentials. Reconnect it from the servers page first.',
+                '当前服务器已没有保存的凭据，请先到服务器页面重新连接。',
             action: FilledButton.icon(
               onPressed: () => context.go('/servers'),
               icon: const Icon(Icons.storage_rounded),
-              label: const Text('Open servers'),
+              label: const Text('打开服务器'),
             ),
           ),
           AsyncData(:final value)
@@ -84,9 +84,9 @@ class HomePage extends ConsumerWidget {
                   value.sections.every((section) => section.items.isEmpty) =>
             const EmptyStateCard(
               icon: Icons.home_outlined,
-              title: 'No playable home items yet',
+              title: '首页暂无可播放内容',
               description:
-                  'Emby returned no playable movie, episode, or video items for the current home feed.',
+                  'Emby 当前首页未返回可播放的电影、剧集或视频内容。',
             ),
           AsyncData(:final value) => _HomeFeedView(feed: value!),
         },
@@ -119,7 +119,7 @@ class _ServerHero extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Continue with ${server.name}',
+              '继续使用 ${server.name}',
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w800,
               ),
@@ -131,7 +131,7 @@ class _ServerHero extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             Text(
-              'Your Emby home feed is now shown as posters and cinematic strips instead of placeholder text lists.',
+              '现在会以海报和横幅卡片展示 Emby 首页内容，不再只是占位文本列表。',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: Colors.white70,
               ),
@@ -154,7 +154,7 @@ class _HomeFeedView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (feed.continueWatching.isNotEmpty) ...[
-          _SectionHeading(title: 'Continue Watching'),
+          _SectionHeading(title: '继续观看'),
           const SizedBox(height: 14),
           SizedBox(
             height: 220,
@@ -174,7 +174,7 @@ class _HomeFeedView extends StatelessWidget {
                         item.thumbImageUrl ??
                         item.posterImageUrl,
                     progress: item.progress,
-                    progressText: '${item.progressPercent}% watched',
+                    progressText: '已观看 ${item.progressPercent}%',
                     onTap: () => _openDetail(context, item),
                   ),
                 );
@@ -191,7 +191,7 @@ class _HomeFeedView extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Text(
-                  'No items returned for this Emby section.',
+                  '该 Emby 分区没有返回任何内容。',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
               ),
@@ -231,7 +231,7 @@ class _HomeFeedView extends StatelessWidget {
   String _mediaMeta(MediaItemSummary item) {
     final parts = <String>[
       if (item.year != null) item.year.toString(),
-      if (item.runtimeSeconds > 0) '${(item.runtimeSeconds / 60).round()} min',
+      if (item.runtimeSeconds > 0) '${(item.runtimeSeconds / 60).round()} 分钟',
     ];
     return parts.join(' • ');
   }
@@ -273,12 +273,12 @@ class _HomeFailureCard extends StatelessWidget {
         ? error as DioException
         : null;
     final description = dioError != null
-        ? 'Home request failed with HTTP ${dioError.response?.statusCode ?? 'unknown'}.'
+        ? '首页请求失败，HTTP 状态码为 ${dioError.response?.statusCode ?? '未知'}。'
         : error.toString();
 
     return EmptyStateCard(
       icon: Icons.error_outline_rounded,
-      title: 'Home load failed',
+      title: '首页加载失败',
       description: description,
     );
   }

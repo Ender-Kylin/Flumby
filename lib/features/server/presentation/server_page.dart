@@ -25,13 +25,13 @@ class ServerPage extends ConsumerWidget {
         children: [
           EmptyStateCard(
             icon: Icons.storage_rounded,
-            title: 'No media servers configured',
+            title: '尚未配置媒体服务器',
             description:
-                'Add and sign in to an Emby server first. Once a server is available, home, libraries, search, detail pages, and playback switch to real data.',
+                '请先添加并登录一个 Emby 服务器。连接成功后，首页、媒体库、搜索、详情和播放都会切换到真实数据。',
             action: FilledButton.icon(
               onPressed: () => _showAddServerDialog(context),
               icon: const Icon(Icons.add_link_rounded),
-              label: const Text('Add Emby Server'),
+              label: const Text('添加 Emby 服务器'),
             ),
           ),
         ],
@@ -47,20 +47,20 @@ class ServerPage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Configured servers',
+                  '已配置的服务器',
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 12),
                 Text(
                   activeServer == null
-                      ? 'Pick an Emby server as the active source for home, libraries, search, and playback.'
-                      : 'Current active server: ${activeServer.name}',
+                      ? '请选择一个 Emby 服务器作为首页、媒体库、搜索和播放的当前数据源。'
+                      : '当前启用的服务器：${activeServer.name}',
                 ),
                 const SizedBox(height: 20),
                 FilledButton.icon(
                   onPressed: () => _showAddServerDialog(context),
                   icon: const Icon(Icons.add_link_rounded),
-                  label: const Text('Add Emby Server'),
+                  label: const Text('添加 Emby 服务器'),
                 ),
               ],
             ),
@@ -127,29 +127,29 @@ class _ServerCard extends ConsumerWidget {
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                       ),
-                      if (isActive) const Chip(label: Text('Active server')),
+                      if (isActive) const Chip(label: Text('当前服务器')),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(server.baseUrl),
                   const SizedBox(height: 4),
-                  Text(server.username ?? 'No username'),
+                  Text(server.username ?? '未设置用户名'),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
                       Chip(
-                        label: Text(server.isOnline ? 'Reachable' : 'Offline'),
+                        label: Text(server.isOnline ? '可连接' : '离线'),
                       ),
                       Chip(
                         label: Text(switch (session) {
-                          AsyncLoading() => 'Checking credentials',
-                          AsyncError() => 'Credential check failed',
+                          AsyncLoading() => '正在检查凭据',
+                          AsyncError() => '凭据检查失败',
                           AsyncData(:final value) =>
                             value == null
-                                ? 'Login required'
-                                : 'Credentials saved',
+                                ? '需要重新登录'
+                                : '凭据已保存',
                         }),
                       ),
                       TextButton.icon(
@@ -159,7 +159,7 @@ class _ServerCard extends ConsumerWidget {
                                   .read(serverControllerProvider.notifier)
                                   .setActiveServer(server.id),
                         icon: const Icon(Icons.radio_button_checked_rounded),
-                        label: const Text('Use this server'),
+                        label: const Text('设为当前服务器'),
                       ),
                       TextButton.icon(
                         onPressed: () =>
@@ -167,8 +167,8 @@ class _ServerCard extends ConsumerWidget {
                         icon: const Icon(Icons.login_rounded),
                         label: Text(
                           session.asData?.value == null
-                              ? 'Sign in'
-                              : 'Re-login',
+                              ? '登录'
+                              : '重新登录',
                         ),
                       ),
                       TextButton.icon(
@@ -176,7 +176,7 @@ class _ServerCard extends ConsumerWidget {
                             .read(serverControllerProvider.notifier)
                             .removeServer(server.id),
                         icon: const Icon(Icons.delete_outline_rounded),
-                        label: const Text('Remove'),
+                        label: const Text('移除'),
                       ),
                     ],
                   ),
@@ -229,7 +229,7 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.server == null ? 'Add Emby Server' : 'Reconnect Emby';
+    final title = widget.server == null ? '添加 Emby 服务器' : '重新连接 Emby';
 
     return AlertDialog(
       title: Text(title),
@@ -245,19 +245,19 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
                 controller: _baseUrlController,
                 enabled: !_submitting,
                 decoration: const InputDecoration(
-                  labelText: 'Base URL',
+                  labelText: '基础地址',
                   hintText: 'http://127.0.0.1:8096',
                 ),
                 keyboardType: TextInputType.url,
                 validator: (value) {
                   final normalized = value?.trim() ?? '';
                   if (normalized.isEmpty) {
-                    return 'Enter your Emby server URL.';
+                    return '请输入 Emby 服务器地址。';
                   }
 
                   final uri = Uri.tryParse(normalized);
                   if (uri == null || uri.scheme.isEmpty || uri.host.isEmpty) {
-                    return 'Use a full URL like http://127.0.0.1:8096.';
+                    return '请输入完整 URL，例如 http://127.0.0.1:8096。';
                   }
 
                   return null;
@@ -267,10 +267,10 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
               TextFormField(
                 controller: _usernameController,
                 enabled: !_submitting,
-                decoration: const InputDecoration(labelText: 'Username'),
+                decoration: const InputDecoration(labelText: '用户名'),
                 validator: (value) {
                   if ((value?.trim() ?? '').isEmpty) {
-                    return 'Enter your Emby username.';
+                    return '请输入 Emby 用户名。';
                   }
                   return null;
                 },
@@ -280,10 +280,10 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
                 controller: _passwordController,
                 enabled: !_submitting,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password'),
+                decoration: const InputDecoration(labelText: '密码'),
                 validator: (value) {
                   if ((value?.trim() ?? '').isEmpty) {
-                    return 'Enter your Emby password.';
+                    return '请输入 Emby 密码。';
                   }
                   return null;
                 },
@@ -303,11 +303,11 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
       actions: [
         TextButton(
           onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: const Text('取消'),
         ),
         FilledButton(
           onPressed: _submitting ? null : _submit,
-          child: Text(_submitting ? 'Connecting...' : 'Connect'),
+          child: Text(_submitting ? '连接中...' : '连接'),
         ),
       ],
     );
@@ -347,7 +347,7 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
                 error.message
           : error.message;
       setState(() {
-        _errorText = message ?? 'Failed to connect to the Emby server.';
+        _errorText = message ?? '连接 Emby 服务器失败。';
       });
     } catch (error) {
       setState(() {

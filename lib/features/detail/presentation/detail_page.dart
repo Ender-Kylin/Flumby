@@ -58,14 +58,14 @@ class DetailPage extends ConsumerWidget {
       final fallbackScaffold = Scaffold(
         appBar: DesktopWindowFrame.isEnabled
             ? null
-            : AppBar(title: Text(title ?? 'Missing Server')),
+            : AppBar(title: Text(title ?? '服务器缺失')),
         body: const Center(
-          child: Text('The selected server is no longer available locally.'),
+          child: Text('所选服务器在本地已不可用。'),
         ),
       );
 
       return DesktopWindowFrame(
-        title: title ?? 'Missing Server',
+        title: title ?? '服务器缺失',
         showBackButton: true,
         child: fallbackScaffold,
       );
@@ -225,7 +225,7 @@ class _DetailBody extends ConsumerWidget {
               ],
               const SizedBox(height: 24),
               Text(
-                'Overview',
+                '简介',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -233,7 +233,7 @@ class _DetailBody extends ConsumerWidget {
               const SizedBox(height: 12),
               Text(
                 value.overview.isEmpty
-                    ? 'No overview returned from Emby.'
+                    ? 'Emby 未返回简介。'
                     : value.overview,
                 style: Theme.of(
                   context,
@@ -327,7 +327,7 @@ class _DetailSummary extends StatelessWidget {
       detail.mediaType,
       if (detail.year != null) detail.year.toString(),
       if (detail.runtimeSeconds > 0)
-        '${(detail.runtimeSeconds / 60).round()} min',
+        '${(detail.runtimeSeconds / 60).round()} 分钟',
     ];
 
     return Column(
@@ -346,9 +346,9 @@ class _DetailSummary extends StatelessWidget {
           runSpacing: 10,
           children: [
             for (final part in metaParts) Chip(label: Text(part)),
-            if (detail.isFavorite) const Chip(label: Text('Favorite')),
+            if (detail.isFavorite) const Chip(label: Text('收藏')),
             if (resumePosition > 0)
-              Chip(label: Text('Resume at ${_formatSeconds(resumePosition)}')),
+              Chip(label: Text('从 ${_formatSeconds(resumePosition)} 继续')),
           ],
         ),
         if (detail.genres.isNotEmpty) ...[
@@ -364,7 +364,7 @@ class _DetailSummary extends StatelessWidget {
         const SizedBox(height: 22),
         Text(
           detail.overview.isEmpty
-              ? 'No overview returned from Emby.'
+              ? 'Emby 未返回简介。'
               : detail.overview,
           maxLines: 4,
           overflow: TextOverflow.ellipsis,
@@ -376,8 +376,8 @@ class _DetailSummary extends StatelessWidget {
         if (detail.isSeries) ...[
           Text(
             recommendedEpisode == null
-                ? 'Choose a season and episode below to keep browsing this show.'
-                : 'Open ${recommendedEpisode!.episodeLabel} from the episode list below, or jump into that episode detail directly.',
+                ? '请在下方选择季和集，继续浏览该剧集。'
+                : '可从下方剧集列表打开 ${recommendedEpisode!.episodeLabel}，也可以直接进入该集详情。',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
@@ -392,7 +392,7 @@ class _DetailSummary extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onPlayPressed,
                 icon: const Icon(Icons.play_arrow_rounded),
-                label: const Text('Play'),
+                label: const Text('播放'),
               ),
             if (detail.isSeries && recommendedEpisode != null)
               FilledButton.icon(
@@ -400,14 +400,14 @@ class _DetailSummary extends StatelessWidget {
                 icon: const Icon(Icons.playlist_play_rounded),
                 label: Text(
                   recommendedEpisode!.isResumable
-                      ? 'Continue ${recommendedEpisode!.episodeLabel}'
-                      : 'Open ${recommendedEpisode!.episodeLabel}',
+                      ? '继续 ${recommendedEpisode!.episodeLabel}'
+                      : '打开 ${recommendedEpisode!.episodeLabel}',
                 ),
               ),
             OutlinedButton.icon(
               onPressed: context.pop,
               icon: const Icon(Icons.arrow_back_rounded),
-              label: const Text('Back'),
+              label: const Text('返回'),
             ),
           ],
         ),
@@ -421,12 +421,12 @@ class _DetailSummary extends StatelessWidget {
     final minutes = duration.inMinutes.remainder(60);
     final secs = duration.inSeconds.remainder(60);
     if (hours > 0) {
-      return '${hours}h ${minutes}m';
+      return '${hours}小时${minutes}分钟';
     }
     if (minutes > 0) {
-      return '${minutes}m ${secs}s';
+      return '${minutes}分${secs}秒';
     }
-    return '${secs}s';
+    return '${secs}秒';
   }
 }
 
@@ -454,9 +454,9 @@ class _SeriesEpisodesSectionState extends State<_SeriesEpisodesSection> {
     if (seasons.isEmpty) {
       return const EmptyStateCard(
         icon: Icons.live_tv_rounded,
-        title: 'No episodes available yet',
+        title: '暂时没有可用剧集',
         description:
-            'This series detail loaded, but Emby did not return any playable episodes for it.',
+            '该剧集详情已加载，但 Emby 没有返回任何可播放剧集。',
       );
     }
 
@@ -474,14 +474,14 @@ class _SeriesEpisodesSectionState extends State<_SeriesEpisodesSection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Episodes',
+          '剧集',
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 10),
         Text(
-          'Pick a season first, then open an episode to see its detail and playback options.',
+          '先选择季，再打开某一集查看详情和播放选项。',
           style: Theme.of(
             context,
           ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
@@ -559,8 +559,8 @@ class _EpisodeListTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final subtitleParts = <String>[
       if (episode.runtimeSeconds > 0)
-        '${(episode.runtimeSeconds / 60).round()} min',
-      if (episode.progressPercent > 0) '${episode.progressPercent}% watched',
+        '${(episode.runtimeSeconds / 60).round()} 分钟',
+      if (episode.progressPercent > 0) '已观看 ${episode.progressPercent}%',
     ];
 
     return Material(
@@ -604,7 +604,7 @@ class _EpisodeListTile extends StatelessWidget {
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Chip(label: Text(episode.episodeLabel)),
-                        if (isRecommended) const Chip(label: Text('Continue')),
+                        if (isRecommended) const Chip(label: Text('继续')),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -667,13 +667,13 @@ class _ReloginPrompt extends StatelessWidget {
   Widget build(BuildContext context) {
     return EmptyStateCard(
       icon: Icons.lock_outline_rounded,
-      title: 'Login required',
+      title: '需要登录',
       description:
-          '${server.name} no longer has saved credentials on this device.',
+          '${server.name} 在此设备上已没有保存的凭据。',
       action: FilledButton.icon(
         onPressed: () => context.go('/servers'),
         icon: const Icon(Icons.storage_rounded),
-        label: const Text('Open servers'),
+        label: const Text('打开服务器'),
       ),
     );
   }
@@ -690,7 +690,7 @@ class _DetailFailureCard extends StatelessWidget {
         ? error as DioException
         : null;
     final description = dioError != null
-        ? 'Detail request failed with HTTP ${dioError.response?.statusCode ?? 'unknown'}.'
+          ? '详情请求失败，HTTP 状态码为 ${dioError.response?.statusCode ?? '未知'}。'
         : error.toString();
 
     return Center(
@@ -698,7 +698,7 @@ class _DetailFailureCard extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: EmptyStateCard(
           icon: Icons.error_outline_rounded,
-          title: 'Detail load failed',
+          title: '详情加载失败',
           description: description,
         ),
       ),

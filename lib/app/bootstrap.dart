@@ -15,7 +15,7 @@ void bootstrap() {
 
       FlutterError.onError = (details) {
         logger.severe(
-          'Unhandled Flutter error',
+          '未处理的 Flutter 错误',
           details.exception,
           details.stack,
         );
@@ -25,7 +25,7 @@ void bootstrap() {
       runApp(const ProviderScope(child: FlumbyApp()));
     },
     (error, stackTrace) {
-      logger.severe('Unhandled zone error', error, stackTrace);
+      logger.severe('未处理的运行时错误', error, stackTrace);
     },
   );
 }

@@ -104,7 +104,7 @@ class _LinuxTitleBarState extends ConsumerState<LinuxTitleBar> {
                 if (widget.showBackButton)
                   _WindowActionButton(
                     icon: Icons.arrow_back_rounded,
-                    tooltip: 'Back',
+                    tooltip: '返回',
                     compact: compact,
                     onPressed: () {
                       if (Navigator.of(context).canPop()) {
@@ -176,13 +176,13 @@ class _LinuxTitleBarState extends ConsumerState<LinuxTitleBar> {
                     if (showSearchAction)
                       _WindowActionButton(
                         icon: Icons.search_rounded,
-                        tooltip: 'Search',
+                        tooltip: '搜索',
                         compact: compact,
                         onPressed: () => context.push('/search'),
                       ),
                     _WindowActionButton(
                       icon: Icons.minimize_rounded,
-                      tooltip: 'Minimize',
+                        tooltip: '最小化',
                       compact: compact,
                       onPressed: () => windowControl.minimizeMainWindow(),
                     ),
@@ -190,13 +190,13 @@ class _LinuxTitleBarState extends ConsumerState<LinuxTitleBar> {
                       icon: _isMaximized
                           ? Icons.filter_none_rounded
                           : Icons.crop_square_rounded,
-                      tooltip: _isMaximized ? 'Restore' : 'Maximize',
+                      tooltip: _isMaximized ? '还原' : '最大化',
                       compact: compact,
                       onPressed: _toggleMaximize,
                     ),
                     _WindowActionButton(
                       icon: Icons.close_rounded,
-                      tooltip: 'Close',
+                      tooltip: '关闭',
                       compact: compact,
                       onPressed: () => windowControl.closeMainWindow(),
                       hoverColor: const Color(0xFFE05252),

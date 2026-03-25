@@ -22,24 +22,24 @@ class SettingsPage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Sync policy',
+                  '同步策略',
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 16),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Expose WebDAV sync'),
+                  title: const Text('启用 WebDAV 同步'),
                   subtitle: const Text(
-                    'Visible by default in v1 configuration.',
+                    '在 v1 配置中默认可见。',
                   ),
                   value: state.webDavEnabled,
                   onChanged: controller.setWebDavEnabled,
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Enable Git sync'),
+                  title: const Text('启用 Git 同步'),
                   subtitle: const Text(
-                    'Defaults to off and should only be activated after explicit setup.',
+                    '默认关闭，仅在完成明确配置后启用。',
                   ),
                   value: state.gitSyncEnabled,
                   onChanged: controller.setGitSyncEnabled,
@@ -56,22 +56,22 @@ class SettingsPage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'mpv defaults',
+                  'mpv 默认值',
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   initialValue: state.hardwareDecoding,
                   decoration: const InputDecoration(
-                    labelText: 'Hardware decoding',
+                    labelText: '硬件解码',
                   ),
                   items: const [
                     DropdownMenuItem(
                       value: 'auto-safe',
-                      child: Text('auto-safe'),
+                      child: Text('自动安全'),
                     ),
-                    DropdownMenuItem(value: 'yes', child: Text('yes')),
-                    DropdownMenuItem(value: 'no', child: Text('no')),
+                    DropdownMenuItem(value: 'yes', child: Text('是')),
+                    DropdownMenuItem(value: 'no', child: Text('否')),
                   ],
                   onChanged: (value) {
                     if (value != null) {
@@ -83,12 +83,12 @@ class SettingsPage extends ConsumerWidget {
                 DropdownButtonFormField<String>(
                   initialValue: state.subtitleLanguage,
                   decoration: const InputDecoration(
-                    labelText: 'Subtitle language',
+                    labelText: '字幕语言',
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'eng', child: Text('English')),
-                    DropdownMenuItem(value: 'chi', child: Text('Chinese')),
-                    DropdownMenuItem(value: 'jpn', child: Text('Japanese')),
+                    DropdownMenuItem(value: 'eng', child: Text('英语')),
+                    DropdownMenuItem(value: 'chi', child: Text('中文')),
+                    DropdownMenuItem(value: 'jpn', child: Text('日语')),
                   ],
                   onChanged: (value) {
                     if (value != null) {
@@ -100,12 +100,12 @@ class SettingsPage extends ConsumerWidget {
                 DropdownButtonFormField<String>(
                   initialValue: state.audioLanguage,
                   decoration: const InputDecoration(
-                    labelText: 'Audio language',
+                    labelText: '音轨语言',
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'eng', child: Text('English')),
-                    DropdownMenuItem(value: 'jpn', child: Text('Japanese')),
-                    DropdownMenuItem(value: 'zho', child: Text('Chinese')),
+                    DropdownMenuItem(value: 'eng', child: Text('英语')),
+                    DropdownMenuItem(value: 'jpn', child: Text('日语')),
+                    DropdownMenuItem(value: 'zho', child: Text('中文')),
                   ],
                   onChanged: (value) {
                     if (value != null) {
@@ -117,9 +117,9 @@ class SettingsPage extends ConsumerWidget {
                   const SizedBox(height: 24),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Open playback in a separate window'),
+                    title: const Text('在独立窗口中打开播放'),
                     subtitle: const Text(
-                      'Launch libmpv in its own Linux window by default.',
+                      '默认在 Linux 的独立窗口中启动 libmpv 播放。',
                     ),
                     value: state.openInSeparateWindow,
                     onChanged: controller.setOpenInSeparateWindow,
@@ -127,10 +127,10 @@ class SettingsPage extends ConsumerWidget {
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text(
-                      'Minimize Flumby during external playback',
+                      '外部播放时最小化 Flumby',
                     ),
                     subtitle: const Text(
-                      'Flumby minimizes to the taskbar and restores itself when playback ends or closes.',
+                      '播放结束或窗口关闭时，Flumby 会最小化到任务栏并自动恢复。',
                     ),
                     value: state.minimizeMainWindowDuringExternalPlayback,
                     onChanged:

@@ -14,22 +14,22 @@ class AppShell extends ConsumerWidget {
 
   static const _destinations = <_ShellDestination>[
     _ShellDestination(
-      label: 'Servers',
+      label: '服务器',
       icon: Icons.storage_rounded,
       selectedIcon: Icons.storage,
     ),
     _ShellDestination(
-      label: 'Home',
+      label: '首页',
       icon: Icons.movie_creation_outlined,
       selectedIcon: Icons.movie_creation_rounded,
     ),
     _ShellDestination(
-      label: 'Libraries',
+      label: '媒体库',
       icon: Icons.video_library_outlined,
       selectedIcon: Icons.video_library_rounded,
     ),
     _ShellDestination(
-      label: 'Settings',
+      label: '设置',
       icon: Icons.tune_outlined,
       selectedIcon: Icons.tune_rounded,
     ),
@@ -59,7 +59,7 @@ class AppShell extends ConsumerWidget {
                     ),
                   ),
                 IconButton(
-                  tooltip: 'Search current server',
+                  tooltip: '搜索当前服务器',
                   onPressed: () => context.push('/search'),
                   icon: const Icon(Icons.search_rounded),
                 ),

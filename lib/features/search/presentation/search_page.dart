@@ -53,7 +53,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final scaffold = Scaffold(
       appBar: DesktopWindowFrame.isEnabled
           ? null
-          : AppBar(title: const Text('Search')),
+          : AppBar(title: const Text('搜索')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
         children: [
@@ -66,9 +66,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           if (activeServer == null)
             const EmptyStateCard(
               icon: Icons.search_off_rounded,
-              title: 'No active server selected',
+              title: '尚未选择当前服务器',
               description:
-                  'Add at least one Emby server, then choose the current server before using search.',
+                  '请先添加至少一个 Emby 服务器，再选择当前服务器后使用搜索。',
             )
           else
             switch (activeSession) {
@@ -80,13 +80,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 value == null
                     ? EmptyStateCard(
                         icon: Icons.lock_outline_rounded,
-                        title: 'Login required',
+                        title: '需要登录',
                         description:
-                            'The active server no longer has saved credentials. Reconnect it from the servers page first.',
+                            '当前服务器已没有保存的凭据，请先到服务器页面重新连接。',
                         action: FilledButton.icon(
                           onPressed: () => context.go('/servers'),
                           icon: const Icon(Icons.storage_rounded),
-                          label: const Text('Open servers'),
+                          label: const Text('打开服务器'),
                         ),
                       )
                     : _SearchResultsSection(query: _query, session: value),
@@ -96,7 +96,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     );
 
     return DesktopWindowFrame(
-      title: 'Search',
+      title: '搜索',
       showBackButton: true,
       child: scaffold,
     );
@@ -144,7 +144,7 @@ class _SearchHero extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              server?.name ?? 'No active server',
+              server?.name ?? '未选择当前服务器',
               style: Theme.of(
                 context,
               ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
@@ -152,7 +152,7 @@ class _SearchHero extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               server?.baseUrl ??
-                  'Choose and sign in to an Emby server before searching.',
+                  '请先选择并登录 Emby 服务器后再进行搜索。',
               style: Theme.of(
                 context,
               ).textTheme.bodyLarge?.copyWith(color: Colors.white70),
@@ -163,8 +163,8 @@ class _SearchHero extends StatelessWidget {
               autofocus: true,
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.search_rounded),
-                labelText: 'Search current server',
-                hintText: 'Movies, episodes, videos',
+                labelText: '搜索当前服务器',
+                hintText: '电影、剧集、视频',
               ),
               onChanged: onChanged,
             ),
@@ -186,18 +186,18 @@ class _SearchResultsSection extends ConsumerWidget {
     if (query.isEmpty) {
       return const EmptyStateCard(
         icon: Icons.manage_search_rounded,
-        title: 'Search ready',
+        title: '搜索已就绪',
         description:
-            'Enter at least 2 characters to search the active Emby server.',
+            '请输入至少 2 个字符来搜索当前 Emby 服务器。',
       );
     }
 
     if (query.length < 2) {
       return const EmptyStateCard(
         icon: Icons.short_text_rounded,
-        title: 'Type a little more',
+        title: '再输入一点',
         description:
-            'Search starts after 2 characters so we do not spam the server.',
+            '搜索会在输入 2 个字符后开始，避免频繁请求服务器。',
       );
     }
 
@@ -210,9 +210,9 @@ class _SearchResultsSection extends ConsumerWidget {
       AsyncError(:final error) => _SearchFailureCard(error: error),
       AsyncData(:final value) when value.isEmpty => EmptyStateCard(
         icon: Icons.search_off_rounded,
-        title: 'No results for "$query"',
+        title: '没有找到 "$query" 的结果',
         description:
-            'Try a different title, or switch the active server and search again.',
+            '可以换个关键词，或者切换当前服务器后重新搜索。',
       ),
       AsyncData(:final value) => _SearchResultsView(results: value),
     };
@@ -232,14 +232,14 @@ class _SearchResultsView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Results',
+          '搜索结果',
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 10),
         Text(
-          'Series stay collapsed in search results. Open a show to pick seasons and episodes from its detail page.',
+          '剧集在搜索结果中会折叠显示。打开剧集后，可在详情页选择季和集。',
           style: Theme.of(
             context,
           ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
@@ -304,15 +304,15 @@ class _SearchResultsGrid extends StatelessWidget {
     if (item.isSeries) {
       final episodeCount = group.relatedEpisodeCount;
       if (episodeCount > 0) {
-        return 'Series • $episodeCount episodes';
+        return '剧集 • $episodeCount 集';
       }
-      return 'Series';
+      return '剧集';
     }
 
     final parts = <String>[
       item.mediaType,
       if (item.year != null) item.year.toString(),
-      if (item.runtimeSeconds > 0) '${(item.runtimeSeconds / 60).round()} min',
+      if (item.runtimeSeconds > 0) '${(item.runtimeSeconds / 60).round()} 分钟',
     ];
     return parts.join(' • ');
   }
@@ -338,12 +338,12 @@ class _SearchFailureCard extends StatelessWidget {
         ? error as DioException
         : null;
     final description = dioError != null
-        ? 'Search request failed with HTTP ${dioError.response?.statusCode ?? 'unknown'}.'
+        ? '搜索请求失败，HTTP 状态码为 ${dioError.response?.statusCode ?? '未知'}。'
         : error.toString();
 
     return EmptyStateCard(
       icon: Icons.error_outline_rounded,
-      title: 'Search failed',
+      title: '搜索失败',
       description: description,
     );
   }

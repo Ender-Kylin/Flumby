@@ -73,14 +73,14 @@ class PlayerPage extends ConsumerWidget {
       final scaffold = Scaffold(
         appBar: DesktopWindowFrame.isEnabled
             ? null
-            : AppBar(title: Text(title ?? 'Missing Server')),
+            : AppBar(title: Text(title ?? '服务器缺失')),
         body: const Center(
-          child: Text('The selected server is no longer available locally.'),
+          child: Text('所选服务器在本地已不可用。'),
         ),
       );
 
       return DesktopWindowFrame(
-        title: title ?? 'Missing Server',
+        title: title ?? '服务器缺失',
         showBackButton: true,
         child: scaffold,
       );
@@ -90,7 +90,7 @@ class PlayerPage extends ConsumerWidget {
     final scaffold = Scaffold(
       appBar: DesktopWindowFrame.isEnabled
           ? null
-          : AppBar(title: Text(title ?? 'Player')),
+          : AppBar(title: Text(title ?? '播放器')),
       body: switch (session) {
         AsyncLoading() => const Center(child: CircularProgressIndicator()),
         AsyncError(:final error) => _PlayerFailureCard(error: error),
@@ -102,7 +102,7 @@ class PlayerPage extends ConsumerWidget {
     );
 
     return DesktopWindowFrame(
-      title: title ?? 'Player',
+      title: title ?? '播放器',
       showBackButton: true,
       child: scaffold,
     );
@@ -175,9 +175,9 @@ class _PlayerView extends ConsumerWidget {
     final playbackMessage = _buildPlaybackMessage(state);
     final actionLabel = isSeparateWindow
         ? (state.externalWindowActive
-              ? 'Window Active'
-              : (state.launchError != null ? 'Retry Window' : 'Open Window'))
-        : (state.isPlaying ? 'Pause' : 'Play');
+              ? '窗口已激活'
+              : (state.launchError != null ? '重试窗口' : '打开窗口'))
+        : (state.isPlaying ? '暂停' : '播放');
     final actionIcon = isSeparateWindow
         ? Icons.open_in_new_rounded
         : (state.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded);
@@ -200,23 +200,23 @@ class _PlayerView extends ConsumerWidget {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    Chip(label: Text('Backend: ${state.backend.name}')),
-                    Chip(label: Text('State: ${state.status.name}')),
+                    Chip(label: Text('后端：${state.backend.name}')),
+                    Chip(label: Text('状态：${state.status.name}')),
                     Chip(
                       label: Text(
-                        'Window: ${isSeparateWindow ? 'separate' : 'inline'}',
+                        '窗口：${isSeparateWindow ? '独立' : '内嵌'}',
                       ),
                     ),
                     if (isSeparateWindow)
                       Chip(
                         label: Text(
                           state.externalWindowActive
-                              ? 'Window active'
-                              : 'Window idle',
+                              ? '窗口已激活'
+                              : '窗口空闲',
                         ),
                       ),
                     if (source.durationSeconds > 0)
-                      Chip(label: Text('Duration: ${source.durationSeconds}s')),
+                      Chip(label: Text('时长：${source.durationSeconds}秒')),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -238,7 +238,7 @@ class _PlayerView extends ConsumerWidget {
                     max: maxSeconds.toDouble(),
                     onChanged: (value) => controller.seekTo(value.round()),
                   ),
-                Text('Position: ${state.positionSeconds}s'),
+                Text('位置：${state.positionSeconds}秒'),
                 const SizedBox(height: 20),
                 Wrap(
                   spacing: 12,
@@ -255,7 +255,7 @@ class _PlayerView extends ConsumerWidget {
                       OutlinedButton(
                         onPressed: () =>
                             controller.seekTo(state.positionSeconds + 30),
-                        child: const Text('+30s'),
+                        child: const Text('+30秒'),
                       ),
                       OutlinedButton(
                         onPressed: () => controller.selectSubtitle(
@@ -263,8 +263,8 @@ class _PlayerView extends ConsumerWidget {
                         ),
                         child: Text(
                           state.subtitleTrackId == 'eng'
-                              ? 'Subs Off'
-                              : 'Subs ENG',
+                              ? '关闭字幕'
+                              : '切换英文字幕',
                         ),
                       ),
                       OutlinedButton(
@@ -273,8 +273,8 @@ class _PlayerView extends ConsumerWidget {
                         ),
                         child: Text(
                           state.audioTrackId == 'jpn'
-                              ? 'Audio ENG'
-                              : 'Audio JPN',
+                              ? '切换英文音轨'
+                              : '切换日文音轨',
                         ),
                       ),
                     ],
@@ -287,21 +287,21 @@ class _PlayerView extends ConsumerWidget {
         const SizedBox(height: 16),
         Card(
           child: ListTile(
-            title: const Text('Hardware decoding'),
-            subtitle: Text('Current saved preference: $hardwareDecoding'),
+            title: const Text('硬件解码'),
+            subtitle: Text('当前保存的偏好：$hardwareDecoding'),
             trailing: FilledButton(
               onPressed: () => controller.setOption('hwdec', hardwareDecoding),
-              child: const Text('Reapply'),
+              child: const Text('重新应用'),
             ),
           ),
         ),
         const SizedBox(height: 12),
         Card(
           child: ListTile(
-            title: const Text('Back to detail'),
+            title: const Text('返回详情'),
             trailing: OutlinedButton(
               onPressed: context.pop,
-              child: const Text('Back'),
+              child: const Text('返回'),
             ),
           ),
         ),
@@ -319,13 +319,13 @@ class _PlayerReloginPrompt extends StatelessWidget {
   Widget build(BuildContext context) {
     return EmptyStateCard(
       icon: Icons.lock_outline_rounded,
-      title: 'Login required',
+      title: '需要登录',
       description:
-          '${server.name} no longer has saved credentials on this device.',
+          '${server.name} 在此设备上已没有保存的凭据。',
       action: FilledButton.icon(
         onPressed: () => context.go('/servers'),
         icon: const Icon(Icons.storage_rounded),
-        label: const Text('Open servers'),
+        label: const Text('打开服务器'),
       ),
     );
   }
@@ -342,7 +342,7 @@ class _PlayerFailureCard extends StatelessWidget {
         ? error as DioException
         : null;
     final description = dioError != null
-        ? 'Player request failed with HTTP ${dioError.response?.statusCode ?? 'unknown'}.'
+          ? '播放器请求失败，HTTP 状态码为 ${dioError.response?.statusCode ?? '未知'}。'
         : error.toString();
 
     return Center(
@@ -350,7 +350,7 @@ class _PlayerFailureCard extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: EmptyStateCard(
           icon: Icons.error_outline_rounded,
-          title: 'Player setup failed',
+          title: '播放器初始化失败',
           description: description,
         ),
       ),
@@ -365,12 +365,12 @@ String _buildPlaybackMessage(PlayerStateSnapshot state) {
 
   if (state.isSeparateWindow) {
     if (state.externalWindowActive) {
-      return 'Playback is running in a separate mpv window. Flumby will restore itself when that window closes.';
+      return '播放正在独立的 mpv 窗口中运行。该窗口关闭后，Flumby 会自动恢复。';
     }
 
-    return 'Flumby launches Linux playback in a separate mpv window and minimizes to the taskbar once the stream is loaded. The Play button here reopens that window if needed.';
+    return 'Flumby 会在 Linux 上以独立 mpv 窗口启动播放，并在流加载后最小化到任务栏。如有需要，这里的播放按钮会重新打开该窗口。';
   }
 
   return state.errorMessage ??
-      'Playback is driven by the shared mpv bridge with Emby progress reporting enabled.';
+      '播放由共享 mpv 桥接驱动，并启用了 Emby 进度回传。';
 }
