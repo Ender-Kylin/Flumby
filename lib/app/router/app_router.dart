@@ -10,6 +10,7 @@ import '../../features/search/presentation/search_page.dart';
 import '../../features/server/presentation/server_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
 import '../navigation/app_shell.dart';
+import '../navigation/desktop_window_frame.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -77,14 +78,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ],
     errorBuilder: (context, state) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Route Error')),
+      final scaffold = Scaffold(
+        appBar: DesktopWindowFrame.isEnabled
+            ? null
+            : AppBar(title: const Text('Route Error')),
         body: Center(
           child: Text(
             state.error?.toString() ?? 'Unknown navigation error',
             textAlign: TextAlign.center,
           ),
         ),
+      );
+
+      return DesktopWindowFrame(
+        title: 'Route Error',
+        showBackButton: true,
+        child: scaffold,
       );
     },
   );

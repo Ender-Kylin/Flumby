@@ -5,8 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/navigation/desktop_window_frame.dart';
+import '../../../core/widgets/emby_media_widgets.dart';
 import '../../../core/widgets/empty_state_card.dart';
 import '../../library/domain/library_models.dart';
+import '../domain/search_result_utils.dart';
 import '../../server/application/media_server_access.dart';
 import '../../server/application/server_controller.dart';
 import '../../server/domain/server_models.dart';
@@ -47,43 +50,19 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Widget build(BuildContext context) {
     final activeServer = ref.watch(activeServerProvider);
     final activeSession = ref.watch(activeServerSessionProvider);
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Search')),
+    final scaffold = Scaffold(
+      appBar: DesktopWindowFrame.isEnabled
+          ? null
+          : AppBar(title: const Text('Search')),
       body: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    activeServer?.name ?? 'No active server',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    activeServer?.baseUrl ??
-                        'Choose and sign in to an Emby server before searching.',
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: _queryController,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.search_rounded),
-                      labelText: 'Search current server',
-                      hintText: 'Movies, episodes, videos',
-                    ),
-                    onChanged: _handleQueryChanged,
-                  ),
-                ],
-              ),
-            ),
+          _SearchHero(
+            server: activeServer,
+            controller: _queryController,
+            onChanged: _handleQueryChanged,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 22),
           if (activeServer == null)
             const EmptyStateCard(
               icon: Icons.search_off_rounded,
@@ -115,6 +94,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         ],
       ),
     );
+
+    return DesktopWindowFrame(
+      title: 'Search',
+      showBackButton: true,
+      child: scaffold,
+    );
   }
 
   void _handleQueryChanged(String value) {
@@ -128,6 +113,65 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         _query = value.trim();
       });
     });
+  }
+}
+
+class _SearchHero extends StatelessWidget {
+  const _SearchHero({
+    required this.server,
+    required this.controller,
+    required this.onChanged,
+  });
+
+  final MediaServerProfile? server;
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(32),
+      child: Container(
+        padding: const EdgeInsets.all(28),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF101925), Color(0xFF1B365A)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              server?.name ?? 'No active server',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              server?.baseUrl ??
+                  'Choose and sign in to an Emby server before searching.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: Colors.white70),
+            ),
+            const SizedBox(height: 22),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search_rounded),
+                labelText: 'Search current server',
+                hintText: 'Movies, episodes, videos',
+              ),
+              onChanged: onChanged,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -170,34 +214,145 @@ class _SearchResultsSection extends ConsumerWidget {
         description:
             'Try a different title, or switch the active server and search again.',
       ),
-      AsyncData(:final value) => Column(
-        children: [
-          for (final item in value) ...[
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.play_circle_outline_rounded),
-                title: Text(item.title),
-                subtitle: Text(
-                  item.overview.isEmpty
-                      ? 'No overview from Emby.'
-                      : item.overview,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: Text('${item.progressPercent}%'),
-                onTap: () => context.push(
-                  Uri(
-                    path: '/detail/${item.serverId}/${item.id}',
-                    queryParameters: {'title': item.title},
-                  ).toString(),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
+      AsyncData(:final value) => _SearchResultsView(results: value),
+    };
+  }
+}
+
+class _SearchResultsView extends StatelessWidget {
+  const _SearchResultsView({required this.results});
+
+  final List<MediaItemSummary> results;
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = buildSearchResultGroups(results);
+    final clusteredGroups = groups.where((group) => group.isClustered).toList();
+    final standaloneItems = groups
+        .where((group) => !group.isClustered)
+        .map((group) => group.primaryItem)
+        .toList(growable: false);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Results',
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'Exact title and series matches are ranked first, and related episodes stay grouped together.',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+        ),
+        if (clusteredGroups.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          for (final group in clusteredGroups) ...[
+            _GroupedSearchSection(group: group),
+            const SizedBox(height: 28),
           ],
         ],
-      ),
+        if (standaloneItems.isNotEmpty) ...[
+          Text(
+            clusteredGroups.isEmpty ? 'Matches' : 'Other Matches',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+          MediaPosterGrid(
+            items: standaloneItems,
+            onItemTap: (item) => _openDetail(context, item),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _openDetail(BuildContext context, MediaItemSummary item) {
+    context.push(
+      Uri(
+        path: '/detail/${item.serverId}/${item.id}',
+        queryParameters: {'title': item.title},
+      ).toString(),
+    );
+  }
+}
+
+class _GroupedSearchSection extends StatelessWidget {
+  const _GroupedSearchSection({required this.group});
+
+  final SearchResultGroup group;
+
+  @override
+  Widget build(BuildContext context) {
+    final caption = switch ((group.primaryItem.mediaType, group.items.length)) {
+      ('Series', final count) when count > 1 =>
+        'Series · $count related matches',
+      ('Series', _) => 'Series',
+      (_, final count) when count > 1 => '$count related matches',
+      _ => group.primaryItem.mediaType,
     };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          group.title,
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          caption,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: PosterMediaCard.cardHeight,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: group.items.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 18),
+            itemBuilder: (context, index) {
+              final item = group.items[index];
+              return SizedBox(
+                width: PosterMediaCard.cardWidth,
+                child: PosterMediaCard(
+                  title: item.title,
+                  subtitle: item.isSeries
+                      ? item.mediaType
+                      : item.searchGroupTitle,
+                  imageUrl:
+                      item.posterImageUrl ??
+                      item.thumbImageUrl ??
+                      item.backdropImageUrl,
+                  progress: item.isResumable ? item.progress : null,
+                  isFavorite: item.isFavorite,
+                  onTap: () => _openDetail(context, item),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _openDetail(BuildContext context, MediaItemSummary item) {
+    context.push(
+      Uri(
+        path: '/detail/${item.serverId}/${item.id}',
+        queryParameters: {'title': item.title},
+      ).toString(),
+    );
   }
 }
 

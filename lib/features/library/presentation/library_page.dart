@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/emby_media_widgets.dart';
 import '../../../core/widgets/empty_state_card.dart';
 import '../../server/application/media_server_access.dart';
 import '../../server/application/server_controller.dart';
@@ -76,9 +77,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
     final activeSession = ref.watch(activeServerSessionProvider);
     return ListView(
+      padding: const EdgeInsets.only(bottom: 32),
       children: [
-        _LibraryHeader(server: activeServer),
-        const SizedBox(height: 16),
+        _LibraryHero(server: activeServer),
+        const SizedBox(height: 24),
         switch (activeSession) {
           AsyncLoading() => const Center(child: CircularProgressIndicator()),
           AsyncError(:final error) => _LibraryFailureCard(
@@ -113,22 +115,40 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 }
 
-class _LibraryHeader extends StatelessWidget {
-  const _LibraryHeader({required this.server});
+class _LibraryHero extends StatelessWidget {
+  const _LibraryHero({required this.server});
 
   final MediaServerProfile server;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(32),
+      child: Container(
+        padding: const EdgeInsets.all(28),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF111B28), Color(0xFF1D3250)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(server.name, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(server.baseUrl, style: Theme.of(context).textTheme.bodyLarge),
+            Text(
+              '${server.name} libraries',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Pick a library strip, then browse its movies, episodes, and videos in a poster grid.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: Colors.white70),
+            ),
           ],
         ),
       ),
@@ -202,27 +222,53 @@ class _LibraryItemsView extends ConsumerWidget {
     final items = ref.watch(
       libraryItemsProvider((session: session, libraryId: selectedLibraryId)),
     );
+    final selectedLibrary = libraries.firstWhere(
+      (library) => library.id == selectedLibraryId,
+    );
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: DropdownButtonFormField<String>(
-              initialValue: selectedLibraryId,
-              decoration: const InputDecoration(labelText: 'Current library'),
-              items: [
-                for (final library in libraries)
-                  DropdownMenuItem(
-                    value: library.id,
-                    child: Text('${library.title} (${library.itemCount})'),
-                  ),
-              ],
-              onChanged: onLibrarySelected,
-            ),
+        Text(
+          'Libraries',
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 138,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: libraries.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 14),
+            itemBuilder: (context, index) {
+              final library = libraries[index];
+              return LibrarySelectionCard(
+                title: library.title,
+                subtitle: '${library.itemCount} items',
+                imageUrl: library.libraryImageUrl,
+                isSelected: library.id == selectedLibraryId,
+                onTap: () => onLibrarySelected(library.id),
+              );
+            },
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 28),
+        Text(
+          selectedLibrary.title,
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '${selectedLibrary.itemCount} entries available on this library view.',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+        ),
+        const SizedBox(height: 18),
         switch (items) {
           AsyncLoading() => const Center(child: CircularProgressIndicator()),
           AsyncError(:final error) => _LibraryFailureCard(
@@ -235,34 +281,14 @@ class _LibraryItemsView extends ConsumerWidget {
             description:
                 'Only movie, episode, and video items are shown in the first Emby pass.',
           ),
-          AsyncData(:final value) => Column(
-            children: [
-              for (final item in value) ...[
-                Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.play_circle_outline_rounded),
-                    title: Text(item.title),
-                    subtitle: Text(
-                      item.overview.isEmpty
-                          ? 'No overview from Emby.'
-                          : item.overview,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: item.isFavorite
-                        ? const Icon(Icons.favorite_rounded)
-                        : null,
-                    onTap: () => context.push(
-                      Uri(
-                        path: '/detail/${item.serverId}/${item.id}',
-                        queryParameters: {'title': item.title},
-                      ).toString(),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-            ],
+          AsyncData(:final value) => MediaPosterGrid(
+            items: value,
+            onItemTap: (item) => context.push(
+              Uri(
+                path: '/detail/${item.serverId}/${item.id}',
+                queryParameters: {'title': item.title},
+              ).toString(),
+            ),
           ),
         },
       ],

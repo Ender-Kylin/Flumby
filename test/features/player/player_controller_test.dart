@@ -389,6 +389,18 @@ class _FakeMediaServerAdapter implements MediaServerAdapter {
 class _RecordingWindowControlService implements WindowControlService {
   int minimizeCalls = 0;
   int restoreCalls = 0;
+  int maximizeCalls = 0;
+  int closeCalls = 0;
+  int dragCalls = 0;
+  bool isMaximized = false;
+
+  @override
+  Future<void> closeMainWindow() async {
+    closeCalls += 1;
+  }
+
+  @override
+  Future<bool> isMainWindowMaximized() async => isMaximized;
 
   @override
   Future<void> minimizeMainWindow() async {
@@ -398,6 +410,17 @@ class _RecordingWindowControlService implements WindowControlService {
   @override
   Future<void> restoreMainWindow() async {
     restoreCalls += 1;
+  }
+
+  @override
+  Future<void> startWindowDrag(Offset globalPosition) async {
+    dragCalls += 1;
+  }
+
+  @override
+  Future<void> toggleMaximizeMainWindow() async {
+    maximizeCalls += 1;
+    isMaximized = !isMaximized;
   }
 }
 

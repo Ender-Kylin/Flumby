@@ -14,9 +14,9 @@ class FlumbyApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Flumby',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
+      theme: AppTheme.dark(),
       darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.dark,
       routerConfig: router,
     );
   }

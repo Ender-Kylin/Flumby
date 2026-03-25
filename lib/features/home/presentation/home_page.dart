@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/emby_media_widgets.dart';
 import '../../../core/widgets/empty_state_card.dart';
 import '../../library/domain/library_models.dart';
 import '../../server/application/media_server_access.dart';
@@ -39,6 +40,7 @@ class HomePage extends ConsumerWidget {
 
     if (activeServer == null) {
       return ListView(
+        padding: const EdgeInsets.only(bottom: 28),
         children: [
           EmptyStateCard(
             icon: Icons.home_outlined,
@@ -58,9 +60,10 @@ class HomePage extends ConsumerWidget {
     final homeFeed = ref.watch(activeHomeFeedProvider);
 
     return ListView(
+      padding: const EdgeInsets.only(bottom: 32),
       children: [
-        _ServerHeader(server: activeServer),
-        const SizedBox(height: 16),
+        _ServerHero(server: activeServer),
+        const SizedBox(height: 28),
         switch (homeFeed) {
           AsyncLoading() => const Center(child: CircularProgressIndicator()),
           AsyncError(:final error) => _HomeFailureCard(error: error),
@@ -92,25 +95,47 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-class _ServerHeader extends StatelessWidget {
-  const _ServerHeader({required this.server});
+class _ServerHero extends StatelessWidget {
+  const _ServerHero({required this.server});
 
   final MediaServerProfile server;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+    final theme = Theme.of(context);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(32),
+      child: Container(
+        padding: const EdgeInsets.all(28),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF163A60), Color(0xFF0C1118)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              server.name,
-              style: Theme.of(context).textTheme.headlineMedium,
+              'Continue with ${server.name}',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: 12),
-            Text(server.baseUrl),
+            Text(
+              server.baseUrl,
+              style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white70),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Your Emby home feed is now shown as posters and cinematic strips instead of placeholder text lists.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: Colors.white70,
+              ),
+            ),
           ],
         ),
       ),
@@ -129,73 +154,110 @@ class _HomeFeedView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (feed.continueWatching.isNotEmpty) ...[
-          Text(
-            'Continue watching',
-            style: Theme.of(context).textTheme.headlineSmall,
+          _SectionHeading(title: 'Continue Watching'),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 220,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: feed.continueWatching.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 16),
+              itemBuilder: (context, index) {
+                final item = feed.continueWatching[index];
+                return SizedBox(
+                  width: 380,
+                  child: WideMediaCard(
+                    title: item.title,
+                    subtitle: item.overview,
+                    imageUrl:
+                        item.backdropImageUrl ??
+                        item.thumbImageUrl ??
+                        item.posterImageUrl,
+                    progress: item.progress,
+                    progressText: '${item.progressPercent}% watched',
+                    onTap: () => _openDetail(context, item),
+                  ),
+                );
+              },
+            ),
           ),
-          const SizedBox(height: 12),
-          for (final item in feed.continueWatching) ...[
-            _HomeItemCard(item: item),
-            const SizedBox(height: 12),
-          ],
-          const SizedBox(height: 20),
+          const SizedBox(height: 30),
         ],
         for (final section in feed.sections) ...[
-          Text(section.title, style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 12),
+          _SectionHeading(title: section.title),
+          const SizedBox(height: 14),
           if (section.items.isEmpty)
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: Text('No items returned for this Emby section.'),
+                child: Text(
+                  'No items returned for this Emby section.',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
               ),
             )
           else
-            for (final item in section.items) ...[
-              _HomeItemCard(item: item),
-              const SizedBox(height: 12),
-            ],
-          const SizedBox(height: 20),
+            SizedBox(
+              height: PosterMediaCard.cardHeight,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: section.items.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 18),
+                itemBuilder: (context, index) {
+                  final item = section.items[index];
+                  return SizedBox(
+                    width: PosterMediaCard.cardWidth,
+                    child: PosterMediaCard(
+                      title: item.title,
+                      subtitle: _mediaMeta(item),
+                      imageUrl:
+                          item.posterImageUrl ??
+                          item.thumbImageUrl ??
+                          item.backdropImageUrl,
+                      progress: item.isResumable ? item.progress : null,
+                      isFavorite: item.isFavorite,
+                      onTap: () => _openDetail(context, item),
+                    ),
+                  );
+                },
+              ),
+            ),
+          const SizedBox(height: 30),
         ],
       ],
     );
   }
+
+  String _mediaMeta(MediaItemSummary item) {
+    final parts = <String>[
+      if (item.year != null) item.year.toString(),
+      if (item.runtimeSeconds > 0) '${(item.runtimeSeconds / 60).round()} min',
+    ];
+    return parts.join(' • ');
+  }
+
+  void _openDetail(BuildContext context, MediaItemSummary item) {
+    context.push(
+      Uri(
+        path: '/detail/${item.serverId}/${item.id}',
+        queryParameters: {'title': item.title},
+      ).toString(),
+    );
+  }
 }
 
-class _HomeItemCard extends StatelessWidget {
-  const _HomeItemCard({required this.item});
+class _SectionHeading extends StatelessWidget {
+  const _SectionHeading({required this.title});
 
-  final MediaItemSummary item;
+  final String title;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.play_circle_outline_rounded),
-        title: Text(item.title),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 6),
-            Text(
-              item.overview.isEmpty ? 'No overview from Emby.' : item.overview,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 10),
-            LinearProgressIndicator(value: item.progress),
-            const SizedBox(height: 6),
-            Text('${item.progressPercent}% watched'),
-          ],
-        ),
-        onTap: () => context.push(
-          Uri(
-            path: '/detail/${item.serverId}/${item.id}',
-            queryParameters: {'title': item.title},
-          ).toString(),
-        ),
-      ),
+    return Text(
+      title,
+      style: Theme.of(
+        context,
+      ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
     );
   }
 }

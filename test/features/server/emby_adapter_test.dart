@@ -43,7 +43,10 @@ void main() {
       expect(queryParameters['SearchTerm'], 'dune');
       expect(queryParameters['Recursive'], isTrue);
       expect(queryParameters['Limit'], 25);
-      expect(queryParameters['IncludeItemTypes'], 'Movie,Episode,Video');
+      expect(
+        queryParameters['IncludeItemTypes'],
+        'Series,Movie,Episode,Video',
+      );
 
       return Response(
         requestOptions: RequestOptions(path: path),
@@ -54,6 +57,8 @@ void main() {
               'ParentId': 'library-1',
               'Name': 'Dune: Part Two',
               'Overview': 'Return to Arrakis.',
+              'ImageTags': {'Primary': 'poster-tag', 'Thumb': 'thumb-tag'},
+              'BackdropImageTags': ['backdrop-tag'],
               'RunTimeTicks': 99600000000,
               'ProductionYear': 2024,
               'UserData': {
@@ -82,6 +87,19 @@ void main() {
     expect(results.first.isFavorite, isTrue);
     expect(results.first.isResumable, isTrue);
     expect(results.first.year, 2024);
+    expect(
+      results.first.posterImageUrl,
+      contains('/Items/movie-1/Images/Primary'),
+    );
+    expect(results.first.posterImageUrl, contains('tag=poster-tag'));
+    expect(
+      results.first.thumbImageUrl,
+      contains('/Items/movie-1/Images/Thumb'),
+    );
+    expect(
+      results.first.backdropImageUrl,
+      contains('/Items/movie-1/Images/Backdrop/0'),
+    );
   });
 
   test('fetchItemDetail uses PlaybackInfo URLs and playback ids', () async {
@@ -116,10 +134,15 @@ void main() {
             'Id': 'item-1',
             'Name': 'Episode 1',
             'Overview': 'Pilot.',
+            'ImageTags': {'Primary': 'poster-tag', 'Thumb': 'thumb-tag'},
+            'BackdropImageTags': ['backdrop-tag'],
             'RunTimeTicks': 36000000000,
             'Type': 'Episode',
             'Genres': ['Drama'],
-            'UserData': {'PlaybackPositionTicks': 120000000},
+            'UserData': {
+              'PlaybackPositionTicks': 120000000,
+              'IsFavorite': true,
+            },
           },
         );
       }
@@ -156,5 +179,12 @@ void main() {
     expect(detail.streamUrl, contains('api_key=token-123'));
     expect(detail.mediaSourceId, 'media-source-1');
     expect(detail.playSessionId, 'play-123');
+    expect(detail.posterImageUrl, contains('/Items/item-1/Images/Primary'));
+    expect(
+      detail.backdropImageUrl,
+      contains('/Items/item-1/Images/Backdrop/0'),
+    );
+    expect(detail.thumbImageUrl, contains('/Items/item-1/Images/Thumb'));
+    expect(detail.isFavorite, isTrue);
   });
 }

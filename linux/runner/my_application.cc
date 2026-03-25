@@ -9,16 +9,42 @@
 
 struct _MyApplication {
   GtkApplication parent_instance;
-  char** dart_entrypoint_arguments;
-  GtkWindow* window;
-  FlMethodChannel* window_control_channel;
+  char **dart_entrypoint_arguments;
+  GtkWindow *window;
+  FlMethodChannel *window_control_channel;
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
-static FlMethodResponse* handle_window_control_method(MyApplication* self,
-                                                      const gchar* method) {
+static gboolean is_window_maximized(GtkWindow *window) {
+  GdkWindow *gdk_window = gtk_widget_get_window(GTK_WIDGET(window));
+  if (gdk_window == nullptr) {
+    return FALSE;
+  }
+
+  return (gdk_window_get_state(gdk_window) & GDK_WINDOW_STATE_MAXIMIZED) != 0;
+}
+
+static FlMethodResponse *handle_window_control_method(MyApplication *self,
+                                                      const gchar *method,
+                                                      FlValue *args) {
   if (self->window == nullptr) {
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
+  }
+
+  if (g_strcmp0(method, "startWindowDrag") == 0) {
+    if (args != nullptr && fl_value_get_type(args) == FL_VALUE_TYPE_MAP) {
+      FlValue *x_value = fl_value_lookup_string(args, "x");
+      FlValue *y_value = fl_value_lookup_string(args, "y");
+      const gint root_x = x_value == nullptr
+                              ? 0
+                              : static_cast<gint>(fl_value_get_float(x_value));
+      const gint root_y = y_value == nullptr
+                              ? 0
+                              : static_cast<gint>(fl_value_get_float(y_value));
+      gtk_window_begin_move_drag(self->window, 1, root_x, root_y,
+                                 GDK_CURRENT_TIME);
+    }
     return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
   }
 
@@ -34,16 +60,36 @@ static FlMethodResponse* handle_window_control_method(MyApplication* self,
     return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
   }
 
+  if (g_strcmp0(method, "toggleMaximizeMainWindow") == 0) {
+    if (is_window_maximized(self->window)) {
+      gtk_window_unmaximize(self->window);
+    } else {
+      gtk_window_maximize(self->window);
+    }
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
+  }
+
+  if (g_strcmp0(method, "isMainWindowMaximized") == 0) {
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(
+        fl_value_new_bool(is_window_maximized(self->window))));
+  }
+
+  if (g_strcmp0(method, "closeMainWindow") == 0) {
+    gtk_window_close(self->window);
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
+  }
+
   return FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
 }
 
-static void window_control_method_call_cb(FlMethodChannel* channel,
-                                          FlMethodCall* method_call,
+static void window_control_method_call_cb(FlMethodChannel *channel,
+                                          FlMethodCall *method_call,
                                           gpointer user_data) {
-  MyApplication* self = MY_APPLICATION(user_data);
-  const gchar* method = fl_method_call_get_name(method_call);
+  MyApplication *self = MY_APPLICATION(user_data);
+  const gchar *method = fl_method_call_get_name(method_call);
+  FlValue *args = fl_method_call_get_args(method_call);
   g_autoptr(FlMethodResponse) response =
-      handle_window_control_method(self, method);
+      handle_window_control_method(self, method, args);
 
   g_autoptr(GError) error = nullptr;
   if (!fl_method_call_respond(method_call, response, &error)) {
@@ -51,63 +97,38 @@ static void window_control_method_call_cb(FlMethodChannel* channel,
   }
 }
 
-static void create_channels(MyApplication* self, FlView* view) {
-  FlEngine* engine = fl_view_get_engine(view);
-  FlBinaryMessenger* messenger = fl_engine_get_binary_messenger(engine);
+static void create_channels(MyApplication *self, FlView *view) {
+  FlEngine *engine = fl_view_get_engine(view);
+  FlBinaryMessenger *messenger = fl_engine_get_binary_messenger(engine);
   g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
 
   self->window_control_channel = fl_method_channel_new(
       messenger, "flumby/window_control", FL_METHOD_CODEC(codec));
   fl_method_channel_set_method_call_handler(self->window_control_channel,
-                                            window_control_method_call_cb,
-                                            self, nullptr);
+                                            window_control_method_call_cb, self,
+                                            nullptr);
 }
 
 // Called when first Flutter frame received.
-static void first_frame_cb(MyApplication* self, FlView* view) {
+static void first_frame_cb(MyApplication *self, FlView *view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
 }
 
 // Implements GApplication::activate.
-static void my_application_activate(GApplication* application) {
-  MyApplication* self = MY_APPLICATION(application);
+static void my_application_activate(GApplication *application) {
+  MyApplication *self = MY_APPLICATION(application);
   self->window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
 
-  // Use a header bar when running in GNOME as this is the common style used
-  // by applications and is the setup most users will be using (e.g. Ubuntu
-  // desktop).
-  // If running on X and not using GNOME then just use a traditional title bar
-  // in case the window manager does more exotic layout, e.g. tiling.
-  // If running on Wayland assume the header bar will work (may need changing
-  // if future cases occur).
-  gboolean use_header_bar = TRUE;
-#ifdef GDK_WINDOWING_X11
-  GdkScreen* screen = gtk_window_get_screen(self->window);
-  if (GDK_IS_X11_SCREEN(screen)) {
-    const gchar* wm_name = gdk_x11_screen_get_window_manager_name(screen);
-    if (g_strcmp0(wm_name, "GNOME Shell") != 0) {
-      use_header_bar = FALSE;
-    }
-  }
-#endif
-  if (use_header_bar) {
-    GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
-    gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "flumby");
-    gtk_header_bar_set_show_close_button(header_bar, TRUE);
-    gtk_window_set_titlebar(self->window, GTK_WIDGET(header_bar));
-  } else {
-    gtk_window_set_title(self->window, "flumby");
-  }
-
+  gtk_window_set_title(self->window, "flumby");
+  gtk_window_set_decorated(self->window, FALSE);
   gtk_window_set_default_size(self->window, 1280, 720);
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
       project, self->dart_entrypoint_arguments);
 
-  FlView* view = fl_view_new(project);
+  FlView *view = fl_view_new(project);
   GdkRGBA background_color;
   // Background defaults to black, override it here if necessary, e.g. #00000000
   // for transparent.
@@ -129,10 +150,10 @@ static void my_application_activate(GApplication* application) {
 }
 
 // Implements GApplication::local_command_line.
-static gboolean my_application_local_command_line(GApplication* application,
-                                                  gchar*** arguments,
-                                                  int* exit_status) {
-  MyApplication* self = MY_APPLICATION(application);
+static gboolean my_application_local_command_line(GApplication *application,
+                                                  gchar ***arguments,
+                                                  int *exit_status) {
+  MyApplication *self = MY_APPLICATION(application);
   // Strip out the first argument as it is the binary name.
   self->dart_entrypoint_arguments = g_strdupv(*arguments + 1);
 
@@ -150,7 +171,7 @@ static gboolean my_application_local_command_line(GApplication* application,
 }
 
 // Implements GApplication::startup.
-static void my_application_startup(GApplication* application) {
+static void my_application_startup(GApplication *application) {
   // MyApplication* self = MY_APPLICATION(object);
 
   // Perform any actions required at application startup.
@@ -159,7 +180,7 @@ static void my_application_startup(GApplication* application) {
 }
 
 // Implements GApplication::shutdown.
-static void my_application_shutdown(GApplication* application) {
+static void my_application_shutdown(GApplication *application) {
   // MyApplication* self = MY_APPLICATION(object);
 
   // Perform any actions required at application shutdown.
@@ -168,14 +189,14 @@ static void my_application_shutdown(GApplication* application) {
 }
 
 // Implements GObject::dispose.
-static void my_application_dispose(GObject* object) {
-  MyApplication* self = MY_APPLICATION(object);
+static void my_application_dispose(GObject *object) {
+  MyApplication *self = MY_APPLICATION(object);
   g_clear_pointer(&self->dart_entrypoint_arguments, g_strfreev);
   g_clear_object(&self->window_control_channel);
   G_OBJECT_CLASS(my_application_parent_class)->dispose(object);
 }
 
-static void my_application_class_init(MyApplicationClass* klass) {
+static void my_application_class_init(MyApplicationClass *klass) {
   G_APPLICATION_CLASS(klass)->activate = my_application_activate;
   G_APPLICATION_CLASS(klass)->local_command_line =
       my_application_local_command_line;
@@ -184,9 +205,9 @@ static void my_application_class_init(MyApplicationClass* klass) {
   G_OBJECT_CLASS(klass)->dispose = my_application_dispose;
 }
 
-static void my_application_init(MyApplication* self) {}
+static void my_application_init(MyApplication *self) {}
 
-MyApplication* my_application_new() {
+MyApplication *my_application_new() {
   // Set the program name to the application ID, which helps various systems
   // like GTK and desktop environments map this running application to its
   // corresponding .desktop file. This ensures better integration by allowing

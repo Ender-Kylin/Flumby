@@ -4,6 +4,7 @@ import '../../detail/domain/media_detail.dart';
 import '../../home/domain/home_models.dart';
 import '../../library/domain/library_models.dart';
 import '../../player/domain/playback_models.dart';
+import '../../search/domain/search_result_utils.dart';
 import '../domain/media_server_adapter.dart';
 import '../domain/server_models.dart';
 
@@ -39,6 +40,7 @@ class EmbyAdapter implements MediaServerAdapter {
     return HomeFeed(
       continueWatching: _itemsFromResponse(
         resumeResponse.data?['Items'] as List<dynamic>? ?? const [],
+        session: session,
         serverId: session.server.id,
         fallbackLibraryId: 'resume',
       ),
@@ -48,6 +50,7 @@ class EmbyAdapter implements MediaServerAdapter {
           title: 'Latest From Emby',
           items: _itemsFromResponse(
             latestResponse.data ?? const [],
+            session: session,
             serverId: session.server.id,
             fallbackLibraryId: 'latest',
           ),
@@ -63,6 +66,9 @@ class EmbyAdapter implements MediaServerAdapter {
     final response = await _dio.get<Map<String, dynamic>>(
       '${session.server.baseUrl}/Users/${session.userId}/Views',
       options: Options(headers: _headers(session.accessToken)),
+      queryParameters: const {
+        'Fields': 'PrimaryImageAspectRatio,ImageTags,BackdropImageTags',
+      },
     );
 
     final items = response.data?['Items'] as List<dynamic>? ?? const [];
@@ -74,6 +80,10 @@ class EmbyAdapter implements MediaServerAdapter {
             serverId: session.server.id,
             title: item['Name']?.toString() ?? 'Untitled Library',
             type: item['CollectionType']?.toString() ?? 'mixed',
+            libraryImageUrl:
+                _resolveBackdropImageUrl(session: session, item: item) ??
+                _resolvePosterImageUrl(session: session, item: item) ??
+                _resolveThumbImageUrl(session: session, item: item),
             itemCount: (item['ChildCount'] as num?)?.toInt() ?? 0,
           ),
         )
@@ -93,12 +103,14 @@ class EmbyAdapter implements MediaServerAdapter {
         'ParentId': libraryId,
         'Recursive': true,
         'IncludeItemTypes': 'Movie,Episode,Video',
-        'Fields': 'Overview,MediaSources,UserData,ProductionYear',
+        'Fields':
+            'Overview,MediaSources,UserData,ProductionYear,PrimaryImageAspectRatio,ImageTags,BackdropImageTags',
       },
     );
 
     return _itemsFromResponse(
       response.data?['Items'] as List<dynamic>? ?? const [],
+      session: session,
       serverId: session.server.id,
       fallbackLibraryId: libraryId,
     );
@@ -109,35 +121,42 @@ class EmbyAdapter implements MediaServerAdapter {
     required MediaServerSession session,
     required String itemId,
   }) async {
-    final detailFuture = _dio.get<Map<String, dynamic>>(
+    final response = await _dio.get<Map<String, dynamic>>(
       '${session.server.baseUrl}/Users/${session.userId}/Items/$itemId',
       options: Options(headers: _headers(session.accessToken)),
       queryParameters: const {
-        'Fields': 'Overview,MediaSources,Genres,Studios,UserData,People',
+        'Fields':
+            'Overview,MediaSources,Genres,Studios,UserData,People,ProductionYear,PrimaryImageAspectRatio,ImageTags,BackdropImageTags',
       },
     );
-    final playbackInfoFuture = _dio.get<Map<String, dynamic>>(
-      '${session.server.baseUrl}/Items/$itemId/PlaybackInfo',
-      options: Options(headers: _headers(session.accessToken)),
-      queryParameters: {
-        'UserId': session.userId,
-        'IsPlayback': true,
-        'AutoOpenLiveStream': true,
-        'StartTimeTicks': 0,
-      },
-    );
-
-    final responses = await Future.wait([detailFuture, playbackInfoFuture]);
-    final response = responses[0];
-    final playbackInfoResponse = responses[1];
 
     final data = response.data ?? const <String, dynamic>{};
-    final playbackInfo = playbackInfoResponse.data ?? const <String, dynamic>{};
-    final playbackSource = _resolvePlaybackSource(
-      session: session,
-      itemId: itemId,
-      playbackInfo: playbackInfo,
-    );
+    final mediaType = data['Type']?.toString() ?? 'Video';
+    final isPlayableType = _isPlayableMediaType(mediaType);
+    final playbackInfo = isPlayableType
+        ? (await _dio.get<Map<String, dynamic>>(
+                '${session.server.baseUrl}/Items/$itemId/PlaybackInfo',
+                options: Options(headers: _headers(session.accessToken)),
+                queryParameters: {
+                  'UserId': session.userId,
+                  'IsPlayback': true,
+                  'AutoOpenLiveStream': true,
+                  'StartTimeTicks': 0,
+                },
+              )).data ??
+              const <String, dynamic>{}
+        : const <String, dynamic>{};
+    final playbackSource = isPlayableType
+        ? _resolvePlaybackSource(
+            session: session,
+            itemId: itemId,
+            playbackInfo: playbackInfo,
+          )
+        : _ResolvedPlaybackSource(
+            uri: Uri.parse(''),
+            mediaSourceId: null,
+            playSessionId: null,
+          );
     final playbackRuntimeSeconds =
         ((playbackSource.mediaSource?['RunTimeTicks'] as num?)?.toDouble() ??
             0) ~/
@@ -148,6 +167,9 @@ class EmbyAdapter implements MediaServerAdapter {
       title: data['Name']?.toString() ?? 'Untitled',
       overview:
           data['Overview']?.toString() ?? 'No overview returned from Emby.',
+      posterImageUrl: _resolvePosterImageUrl(session: session, item: data),
+      backdropImageUrl: _resolveBackdropImageUrl(session: session, item: data),
+      thumbImageUrl: _resolveThumbImageUrl(session: session, item: data),
       runtimeSeconds:
           ((data['RunTimeTicks'] as num?)?.toDouble() ?? 0) ~/ 10000000 > 0
           ? (((data['RunTimeTicks'] as num?)?.toDouble() ?? 0) ~/ 10000000)
@@ -156,12 +178,13 @@ class EmbyAdapter implements MediaServerAdapter {
           ((data['UserData']?['PlaybackPositionTicks'] as num?)?.toDouble() ??
               0) ~/
           10000000,
+      isFavorite: data['UserData']?['IsFavorite'] == true,
       year: (data['ProductionYear'] as num?)?.toInt(),
       genres: (data['Genres'] as List<dynamic>? ?? const [])
           .map((value) => value.toString())
           .toList(growable: false),
-      mediaType: data['Type']?.toString() ?? 'Video',
-      streamUrl: playbackSource.uri.toString(),
+      mediaType: mediaType,
+      streamUrl: isPlayableType ? playbackSource.uri.toString() : '',
       mediaSourceId: playbackSource.mediaSourceId,
       playSessionId: playbackSource.playSessionId,
     );
@@ -180,16 +203,19 @@ class EmbyAdapter implements MediaServerAdapter {
         'SearchTerm': query,
         'Recursive': true,
         'Limit': limit,
-        'IncludeItemTypes': 'Movie,Episode,Video',
-        'Fields': 'Overview,MediaSources,UserData,ProductionYear',
+        'IncludeItemTypes': 'Series,Movie,Episode,Video',
+        'Fields':
+            'Overview,MediaSources,UserData,ProductionYear,PrimaryImageAspectRatio,ImageTags,BackdropImageTags,SortName',
       },
     );
 
-    return _itemsFromResponse(
+    final mappedItems = _itemsFromResponse(
       response.data?['Items'] as List<dynamic>? ?? const [],
+      session: session,
       serverId: session.server.id,
       fallbackLibraryId: 'search',
     );
+    return refineSearchResults(mappedItems, query);
   }
 
   @override
@@ -381,6 +407,7 @@ class EmbyAdapter implements MediaServerAdapter {
 
   List<MediaItemSummary> _itemsFromResponse(
     List<dynamic> items, {
+    required MediaServerSession session,
     required String serverId,
     required String fallbackLibraryId,
   }) {
@@ -393,6 +420,15 @@ class EmbyAdapter implements MediaServerAdapter {
             libraryId: item['ParentId']?.toString() ?? fallbackLibraryId,
             title: item['Name']?.toString() ?? 'Untitled',
             overview: item['Overview']?.toString() ?? 'No overview',
+            posterImageUrl: _resolvePosterImageUrl(
+              session: session,
+              item: item,
+            ),
+            backdropImageUrl: _resolveBackdropImageUrl(
+              session: session,
+              item: item,
+            ),
+            thumbImageUrl: _resolveThumbImageUrl(session: session, item: item),
             runtimeSeconds:
                 ((item['RunTimeTicks'] as num?)?.toDouble() ?? 0) ~/ 10000000,
             progress:
@@ -406,11 +442,123 @@ class EmbyAdapter implements MediaServerAdapter {
                         ?.toDouble() ??
                     0) >
                 0,
+            mediaType: item['Type']?.toString() ?? 'Video',
+            seriesId: item['SeriesId']?.toString(),
+            seriesTitle: item['SeriesName']?.toString(),
             year: (item['ProductionYear'] as num?)?.toInt(),
           ),
         )
         .where((item) => item.id.isNotEmpty)
         .toList(growable: false);
+  }
+
+  bool _isPlayableMediaType(String mediaType) {
+    return switch (mediaType) {
+      'Movie' || 'Episode' || 'Video' => true,
+      _ => false,
+    };
+  }
+
+  String? _resolvePosterImageUrl({
+    required MediaServerSession session,
+    required Map<String, dynamic> item,
+  }) {
+    final itemId = item['Id']?.toString();
+    final primaryTag = _imageTag(item, 'Primary');
+    if (itemId == null || itemId.isEmpty || primaryTag == null) {
+      return null;
+    }
+
+    return _buildImageUrl(
+      session: session,
+      itemId: itemId,
+      imageType: 'Primary',
+      tag: primaryTag,
+    );
+  }
+
+  String? _resolveThumbImageUrl({
+    required MediaServerSession session,
+    required Map<String, dynamic> item,
+  }) {
+    final itemId = item['Id']?.toString();
+    final thumbTag = _imageTag(item, 'Thumb');
+    if (itemId == null || itemId.isEmpty || thumbTag == null) {
+      return null;
+    }
+
+    return _buildImageUrl(
+      session: session,
+      itemId: itemId,
+      imageType: 'Thumb',
+      tag: thumbTag,
+    );
+  }
+
+  String? _resolveBackdropImageUrl({
+    required MediaServerSession session,
+    required Map<String, dynamic> item,
+  }) {
+    final itemId = item['Id']?.toString();
+    final backdropTag = _backdropTag(item);
+    if (itemId == null || itemId.isEmpty || backdropTag == null) {
+      return null;
+    }
+
+    return _buildImageUrl(
+      session: session,
+      itemId: itemId,
+      imageType: 'Backdrop',
+      tag: backdropTag,
+      imageIndex: 0,
+    );
+  }
+
+  String? _imageTag(Map<String, dynamic> item, String key) {
+    final imageTags = item['ImageTags'];
+    if (imageTags is! Map) {
+      return null;
+    }
+
+    final value = imageTags[key];
+    final tag = value?.toString();
+    if (tag == null || tag.isEmpty) {
+      return null;
+    }
+    return tag;
+  }
+
+  String? _backdropTag(Map<String, dynamic> item) {
+    final backdropTags = item['BackdropImageTags'];
+    if (backdropTags is! List || backdropTags.isEmpty) {
+      return null;
+    }
+
+    final tag = backdropTags.first?.toString();
+    if (tag == null || tag.isEmpty) {
+      return null;
+    }
+    return tag;
+  }
+
+  String _buildImageUrl({
+    required MediaServerSession session,
+    required String itemId,
+    required String imageType,
+    String? tag,
+    int? imageIndex,
+  }) {
+    final path = imageIndex == null
+        ? '/Items/$itemId/Images/$imageType'
+        : '/Items/$itemId/Images/$imageType/$imageIndex';
+    return Uri.parse('${session.server.baseUrl}$path')
+        .replace(
+          queryParameters: {
+            'api_key': session.accessToken,
+            if (tag != null && tag.isNotEmpty) 'tag': tag,
+          },
+        )
+        .toString();
   }
 }
 

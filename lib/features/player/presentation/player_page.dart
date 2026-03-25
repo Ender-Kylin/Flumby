@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/navigation/desktop_window_frame.dart';
 import '../../../core/widgets/empty_state_card.dart';
 import '../../detail/domain/media_detail.dart';
 import '../../player/data/playback_state_repository.dart';
@@ -69,17 +70,27 @@ class PlayerPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final server = ref.watch(serverByIdProvider(serverId));
     if (server == null) {
-      return Scaffold(
-        appBar: AppBar(title: Text(title ?? 'Missing Server')),
+      final scaffold = Scaffold(
+        appBar: DesktopWindowFrame.isEnabled
+            ? null
+            : AppBar(title: Text(title ?? 'Missing Server')),
         body: const Center(
           child: Text('The selected server is no longer available locally.'),
         ),
       );
+
+      return DesktopWindowFrame(
+        title: title ?? 'Missing Server',
+        showBackButton: true,
+        child: scaffold,
+      );
     }
 
     final session = ref.watch(serverSessionProvider(serverId));
-    return Scaffold(
-      appBar: AppBar(title: Text(title ?? 'Player')),
+    final scaffold = Scaffold(
+      appBar: DesktopWindowFrame.isEnabled
+          ? null
+          : AppBar(title: Text(title ?? 'Player')),
       body: switch (session) {
         AsyncLoading() => const Center(child: CircularProgressIndicator()),
         AsyncError(:final error) => _PlayerFailureCard(error: error),
@@ -88,6 +99,12 @@ class PlayerPage extends ConsumerWidget {
               ? _PlayerReloginPrompt(server: server)
               : _PlayerSessionBody(itemId: itemId, session: value),
       },
+    );
+
+    return DesktopWindowFrame(
+      title: title ?? 'Player',
+      showBackButton: true,
+      child: scaffold,
     );
   }
 }

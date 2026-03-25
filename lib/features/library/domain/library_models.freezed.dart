@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$LibrarySummary {
 
- String get id; String get serverId; String get title; String get type; int get itemCount;
+ String get id; String get serverId; String get title; String get type; String? get libraryImageUrl; int get itemCount;
 /// Create a copy of LibrarySummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $LibrarySummaryCopyWith<LibrarySummary> get copyWith => _$LibrarySummaryCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is LibrarySummary&&(identical(other.id, id) || other.id == id)&&(identical(other.serverId, serverId) || other.serverId == serverId)&&(identical(other.title, title) || other.title == title)&&(identical(other.type, type) || other.type == type)&&(identical(other.itemCount, itemCount) || other.itemCount == itemCount));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is LibrarySummary&&(identical(other.id, id) || other.id == id)&&(identical(other.serverId, serverId) || other.serverId == serverId)&&(identical(other.title, title) || other.title == title)&&(identical(other.type, type) || other.type == type)&&(identical(other.libraryImageUrl, libraryImageUrl) || other.libraryImageUrl == libraryImageUrl)&&(identical(other.itemCount, itemCount) || other.itemCount == itemCount));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,serverId,title,type,itemCount);
+int get hashCode => Object.hash(runtimeType,id,serverId,title,type,libraryImageUrl,itemCount);
 
 @override
 String toString() {
-  return 'LibrarySummary(id: $id, serverId: $serverId, title: $title, type: $type, itemCount: $itemCount)';
+  return 'LibrarySummary(id: $id, serverId: $serverId, title: $title, type: $type, libraryImageUrl: $libraryImageUrl, itemCount: $itemCount)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $LibrarySummaryCopyWith<$Res>  {
   factory $LibrarySummaryCopyWith(LibrarySummary value, $Res Function(LibrarySummary) _then) = _$LibrarySummaryCopyWithImpl;
 @useResult
 $Res call({
- String id, String serverId, String title, String type, int itemCount
+ String id, String serverId, String title, String type, String? libraryImageUrl, int itemCount
 });
 
 
@@ -65,13 +65,14 @@ class _$LibrarySummaryCopyWithImpl<$Res>
 
 /// Create a copy of LibrarySummary
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? serverId = null,Object? title = null,Object? type = null,Object? itemCount = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? serverId = null,Object? title = null,Object? type = null,Object? libraryImageUrl = freezed,Object? itemCount = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,serverId: null == serverId ? _self.serverId : serverId // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
-as String,itemCount: null == itemCount ? _self.itemCount : itemCount // ignore: cast_nullable_to_non_nullable
+as String,libraryImageUrl: freezed == libraryImageUrl ? _self.libraryImageUrl : libraryImageUrl // ignore: cast_nullable_to_non_nullable
+as String?,itemCount: null == itemCount ? _self.itemCount : itemCount // ignore: cast_nullable_to_non_nullable
 as int,
   ));
 }
@@ -157,10 +158,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String serverId,  String title,  String type,  int itemCount)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String serverId,  String title,  String type,  String? libraryImageUrl,  int itemCount)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LibrarySummary() when $default != null:
-return $default(_that.id,_that.serverId,_that.title,_that.type,_that.itemCount);case _:
+return $default(_that.id,_that.serverId,_that.title,_that.type,_that.libraryImageUrl,_that.itemCount);case _:
   return orElse();
 
 }
@@ -178,10 +179,10 @@ return $default(_that.id,_that.serverId,_that.title,_that.type,_that.itemCount);
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String serverId,  String title,  String type,  int itemCount)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String serverId,  String title,  String type,  String? libraryImageUrl,  int itemCount)  $default,) {final _that = this;
 switch (_that) {
 case _LibrarySummary():
-return $default(_that.id,_that.serverId,_that.title,_that.type,_that.itemCount);case _:
+return $default(_that.id,_that.serverId,_that.title,_that.type,_that.libraryImageUrl,_that.itemCount);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -198,10 +199,10 @@ return $default(_that.id,_that.serverId,_that.title,_that.type,_that.itemCount);
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String serverId,  String title,  String type,  int itemCount)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String serverId,  String title,  String type,  String? libraryImageUrl,  int itemCount)?  $default,) {final _that = this;
 switch (_that) {
 case _LibrarySummary() when $default != null:
-return $default(_that.id,_that.serverId,_that.title,_that.type,_that.itemCount);case _:
+return $default(_that.id,_that.serverId,_that.title,_that.type,_that.libraryImageUrl,_that.itemCount);case _:
   return null;
 
 }
@@ -213,13 +214,14 @@ return $default(_that.id,_that.serverId,_that.title,_that.type,_that.itemCount);
 @JsonSerializable()
 
 class _LibrarySummary implements LibrarySummary {
-  const _LibrarySummary({required this.id, required this.serverId, required this.title, required this.type, this.itemCount = 0});
+  const _LibrarySummary({required this.id, required this.serverId, required this.title, required this.type, this.libraryImageUrl, this.itemCount = 0});
   factory _LibrarySummary.fromJson(Map<String, dynamic> json) => _$LibrarySummaryFromJson(json);
 
 @override final  String id;
 @override final  String serverId;
 @override final  String title;
 @override final  String type;
+@override final  String? libraryImageUrl;
 @override@JsonKey() final  int itemCount;
 
 /// Create a copy of LibrarySummary
@@ -235,16 +237,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LibrarySummary&&(identical(other.id, id) || other.id == id)&&(identical(other.serverId, serverId) || other.serverId == serverId)&&(identical(other.title, title) || other.title == title)&&(identical(other.type, type) || other.type == type)&&(identical(other.itemCount, itemCount) || other.itemCount == itemCount));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LibrarySummary&&(identical(other.id, id) || other.id == id)&&(identical(other.serverId, serverId) || other.serverId == serverId)&&(identical(other.title, title) || other.title == title)&&(identical(other.type, type) || other.type == type)&&(identical(other.libraryImageUrl, libraryImageUrl) || other.libraryImageUrl == libraryImageUrl)&&(identical(other.itemCount, itemCount) || other.itemCount == itemCount));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,serverId,title,type,itemCount);
+int get hashCode => Object.hash(runtimeType,id,serverId,title,type,libraryImageUrl,itemCount);
 
 @override
 String toString() {
-  return 'LibrarySummary(id: $id, serverId: $serverId, title: $title, type: $type, itemCount: $itemCount)';
+  return 'LibrarySummary(id: $id, serverId: $serverId, title: $title, type: $type, libraryImageUrl: $libraryImageUrl, itemCount: $itemCount)';
 }
 
 
@@ -255,7 +257,7 @@ abstract mixin class _$LibrarySummaryCopyWith<$Res> implements $LibrarySummaryCo
   factory _$LibrarySummaryCopyWith(_LibrarySummary value, $Res Function(_LibrarySummary) _then) = __$LibrarySummaryCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String serverId, String title, String type, int itemCount
+ String id, String serverId, String title, String type, String? libraryImageUrl, int itemCount
 });
 
 
@@ -272,13 +274,14 @@ class __$LibrarySummaryCopyWithImpl<$Res>
 
 /// Create a copy of LibrarySummary
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? serverId = null,Object? title = null,Object? type = null,Object? itemCount = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? serverId = null,Object? title = null,Object? type = null,Object? libraryImageUrl = freezed,Object? itemCount = null,}) {
   return _then(_LibrarySummary(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,serverId: null == serverId ? _self.serverId : serverId // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
-as String,itemCount: null == itemCount ? _self.itemCount : itemCount // ignore: cast_nullable_to_non_nullable
+as String,libraryImageUrl: freezed == libraryImageUrl ? _self.libraryImageUrl : libraryImageUrl // ignore: cast_nullable_to_non_nullable
+as String?,itemCount: null == itemCount ? _self.itemCount : itemCount // ignore: cast_nullable_to_non_nullable
 as int,
   ));
 }
@@ -290,7 +293,7 @@ as int,
 /// @nodoc
 mixin _$MediaItemSummary {
 
- String get id; String get serverId; String get libraryId; String get title; String get overview; int get runtimeSeconds; double get progress; bool get isFavorite; bool get isResumable; int? get year;
+ String get id; String get serverId; String get libraryId; String get title; String get overview; String? get posterImageUrl; String? get backdropImageUrl; String? get thumbImageUrl; int get runtimeSeconds; double get progress; bool get isFavorite; bool get isResumable; String get mediaType; String? get seriesId; String? get seriesTitle; int? get year;
 /// Create a copy of MediaItemSummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -303,16 +306,16 @@ $MediaItemSummaryCopyWith<MediaItemSummary> get copyWith => _$MediaItemSummaryCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MediaItemSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.serverId, serverId) || other.serverId == serverId)&&(identical(other.libraryId, libraryId) || other.libraryId == libraryId)&&(identical(other.title, title) || other.title == title)&&(identical(other.overview, overview) || other.overview == overview)&&(identical(other.runtimeSeconds, runtimeSeconds) || other.runtimeSeconds == runtimeSeconds)&&(identical(other.progress, progress) || other.progress == progress)&&(identical(other.isFavorite, isFavorite) || other.isFavorite == isFavorite)&&(identical(other.isResumable, isResumable) || other.isResumable == isResumable)&&(identical(other.year, year) || other.year == year));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MediaItemSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.serverId, serverId) || other.serverId == serverId)&&(identical(other.libraryId, libraryId) || other.libraryId == libraryId)&&(identical(other.title, title) || other.title == title)&&(identical(other.overview, overview) || other.overview == overview)&&(identical(other.posterImageUrl, posterImageUrl) || other.posterImageUrl == posterImageUrl)&&(identical(other.backdropImageUrl, backdropImageUrl) || other.backdropImageUrl == backdropImageUrl)&&(identical(other.thumbImageUrl, thumbImageUrl) || other.thumbImageUrl == thumbImageUrl)&&(identical(other.runtimeSeconds, runtimeSeconds) || other.runtimeSeconds == runtimeSeconds)&&(identical(other.progress, progress) || other.progress == progress)&&(identical(other.isFavorite, isFavorite) || other.isFavorite == isFavorite)&&(identical(other.isResumable, isResumable) || other.isResumable == isResumable)&&(identical(other.mediaType, mediaType) || other.mediaType == mediaType)&&(identical(other.seriesId, seriesId) || other.seriesId == seriesId)&&(identical(other.seriesTitle, seriesTitle) || other.seriesTitle == seriesTitle)&&(identical(other.year, year) || other.year == year));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,serverId,libraryId,title,overview,runtimeSeconds,progress,isFavorite,isResumable,year);
+int get hashCode => Object.hash(runtimeType,id,serverId,libraryId,title,overview,posterImageUrl,backdropImageUrl,thumbImageUrl,runtimeSeconds,progress,isFavorite,isResumable,mediaType,seriesId,seriesTitle,year);
 
 @override
 String toString() {
-  return 'MediaItemSummary(id: $id, serverId: $serverId, libraryId: $libraryId, title: $title, overview: $overview, runtimeSeconds: $runtimeSeconds, progress: $progress, isFavorite: $isFavorite, isResumable: $isResumable, year: $year)';
+  return 'MediaItemSummary(id: $id, serverId: $serverId, libraryId: $libraryId, title: $title, overview: $overview, posterImageUrl: $posterImageUrl, backdropImageUrl: $backdropImageUrl, thumbImageUrl: $thumbImageUrl, runtimeSeconds: $runtimeSeconds, progress: $progress, isFavorite: $isFavorite, isResumable: $isResumable, mediaType: $mediaType, seriesId: $seriesId, seriesTitle: $seriesTitle, year: $year)';
 }
 
 
@@ -323,7 +326,7 @@ abstract mixin class $MediaItemSummaryCopyWith<$Res>  {
   factory $MediaItemSummaryCopyWith(MediaItemSummary value, $Res Function(MediaItemSummary) _then) = _$MediaItemSummaryCopyWithImpl;
 @useResult
 $Res call({
- String id, String serverId, String libraryId, String title, String overview, int runtimeSeconds, double progress, bool isFavorite, bool isResumable, int? year
+ String id, String serverId, String libraryId, String title, String overview, String? posterImageUrl, String? backdropImageUrl, String? thumbImageUrl, int runtimeSeconds, double progress, bool isFavorite, bool isResumable, String mediaType, String? seriesId, String? seriesTitle, int? year
 });
 
 
@@ -340,18 +343,24 @@ class _$MediaItemSummaryCopyWithImpl<$Res>
 
 /// Create a copy of MediaItemSummary
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? serverId = null,Object? libraryId = null,Object? title = null,Object? overview = null,Object? runtimeSeconds = null,Object? progress = null,Object? isFavorite = null,Object? isResumable = null,Object? year = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? serverId = null,Object? libraryId = null,Object? title = null,Object? overview = null,Object? posterImageUrl = freezed,Object? backdropImageUrl = freezed,Object? thumbImageUrl = freezed,Object? runtimeSeconds = null,Object? progress = null,Object? isFavorite = null,Object? isResumable = null,Object? mediaType = null,Object? seriesId = freezed,Object? seriesTitle = freezed,Object? year = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,serverId: null == serverId ? _self.serverId : serverId // ignore: cast_nullable_to_non_nullable
 as String,libraryId: null == libraryId ? _self.libraryId : libraryId // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,overview: null == overview ? _self.overview : overview // ignore: cast_nullable_to_non_nullable
-as String,runtimeSeconds: null == runtimeSeconds ? _self.runtimeSeconds : runtimeSeconds // ignore: cast_nullable_to_non_nullable
+as String,posterImageUrl: freezed == posterImageUrl ? _self.posterImageUrl : posterImageUrl // ignore: cast_nullable_to_non_nullable
+as String?,backdropImageUrl: freezed == backdropImageUrl ? _self.backdropImageUrl : backdropImageUrl // ignore: cast_nullable_to_non_nullable
+as String?,thumbImageUrl: freezed == thumbImageUrl ? _self.thumbImageUrl : thumbImageUrl // ignore: cast_nullable_to_non_nullable
+as String?,runtimeSeconds: null == runtimeSeconds ? _self.runtimeSeconds : runtimeSeconds // ignore: cast_nullable_to_non_nullable
 as int,progress: null == progress ? _self.progress : progress // ignore: cast_nullable_to_non_nullable
 as double,isFavorite: null == isFavorite ? _self.isFavorite : isFavorite // ignore: cast_nullable_to_non_nullable
 as bool,isResumable: null == isResumable ? _self.isResumable : isResumable // ignore: cast_nullable_to_non_nullable
-as bool,year: freezed == year ? _self.year : year // ignore: cast_nullable_to_non_nullable
+as bool,mediaType: null == mediaType ? _self.mediaType : mediaType // ignore: cast_nullable_to_non_nullable
+as String,seriesId: freezed == seriesId ? _self.seriesId : seriesId // ignore: cast_nullable_to_non_nullable
+as String?,seriesTitle: freezed == seriesTitle ? _self.seriesTitle : seriesTitle // ignore: cast_nullable_to_non_nullable
+as String?,year: freezed == year ? _self.year : year // ignore: cast_nullable_to_non_nullable
 as int?,
   ));
 }
@@ -437,10 +446,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String serverId,  String libraryId,  String title,  String overview,  int runtimeSeconds,  double progress,  bool isFavorite,  bool isResumable,  int? year)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String serverId,  String libraryId,  String title,  String overview,  String? posterImageUrl,  String? backdropImageUrl,  String? thumbImageUrl,  int runtimeSeconds,  double progress,  bool isFavorite,  bool isResumable,  String mediaType,  String? seriesId,  String? seriesTitle,  int? year)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MediaItemSummary() when $default != null:
-return $default(_that.id,_that.serverId,_that.libraryId,_that.title,_that.overview,_that.runtimeSeconds,_that.progress,_that.isFavorite,_that.isResumable,_that.year);case _:
+return $default(_that.id,_that.serverId,_that.libraryId,_that.title,_that.overview,_that.posterImageUrl,_that.backdropImageUrl,_that.thumbImageUrl,_that.runtimeSeconds,_that.progress,_that.isFavorite,_that.isResumable,_that.mediaType,_that.seriesId,_that.seriesTitle,_that.year);case _:
   return orElse();
 
 }
@@ -458,10 +467,10 @@ return $default(_that.id,_that.serverId,_that.libraryId,_that.title,_that.overvi
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String serverId,  String libraryId,  String title,  String overview,  int runtimeSeconds,  double progress,  bool isFavorite,  bool isResumable,  int? year)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String serverId,  String libraryId,  String title,  String overview,  String? posterImageUrl,  String? backdropImageUrl,  String? thumbImageUrl,  int runtimeSeconds,  double progress,  bool isFavorite,  bool isResumable,  String mediaType,  String? seriesId,  String? seriesTitle,  int? year)  $default,) {final _that = this;
 switch (_that) {
 case _MediaItemSummary():
-return $default(_that.id,_that.serverId,_that.libraryId,_that.title,_that.overview,_that.runtimeSeconds,_that.progress,_that.isFavorite,_that.isResumable,_that.year);case _:
+return $default(_that.id,_that.serverId,_that.libraryId,_that.title,_that.overview,_that.posterImageUrl,_that.backdropImageUrl,_that.thumbImageUrl,_that.runtimeSeconds,_that.progress,_that.isFavorite,_that.isResumable,_that.mediaType,_that.seriesId,_that.seriesTitle,_that.year);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -478,10 +487,10 @@ return $default(_that.id,_that.serverId,_that.libraryId,_that.title,_that.overvi
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String serverId,  String libraryId,  String title,  String overview,  int runtimeSeconds,  double progress,  bool isFavorite,  bool isResumable,  int? year)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String serverId,  String libraryId,  String title,  String overview,  String? posterImageUrl,  String? backdropImageUrl,  String? thumbImageUrl,  int runtimeSeconds,  double progress,  bool isFavorite,  bool isResumable,  String mediaType,  String? seriesId,  String? seriesTitle,  int? year)?  $default,) {final _that = this;
 switch (_that) {
 case _MediaItemSummary() when $default != null:
-return $default(_that.id,_that.serverId,_that.libraryId,_that.title,_that.overview,_that.runtimeSeconds,_that.progress,_that.isFavorite,_that.isResumable,_that.year);case _:
+return $default(_that.id,_that.serverId,_that.libraryId,_that.title,_that.overview,_that.posterImageUrl,_that.backdropImageUrl,_that.thumbImageUrl,_that.runtimeSeconds,_that.progress,_that.isFavorite,_that.isResumable,_that.mediaType,_that.seriesId,_that.seriesTitle,_that.year);case _:
   return null;
 
 }
@@ -493,7 +502,7 @@ return $default(_that.id,_that.serverId,_that.libraryId,_that.title,_that.overvi
 @JsonSerializable()
 
 class _MediaItemSummary extends MediaItemSummary {
-  const _MediaItemSummary({required this.id, required this.serverId, required this.libraryId, required this.title, required this.overview, this.runtimeSeconds = 0, this.progress = 0, this.isFavorite = false, this.isResumable = false, this.year}): super._();
+  const _MediaItemSummary({required this.id, required this.serverId, required this.libraryId, required this.title, required this.overview, this.posterImageUrl, this.backdropImageUrl, this.thumbImageUrl, this.runtimeSeconds = 0, this.progress = 0, this.isFavorite = false, this.isResumable = false, this.mediaType = 'Video', this.seriesId, this.seriesTitle, this.year}): super._();
   factory _MediaItemSummary.fromJson(Map<String, dynamic> json) => _$MediaItemSummaryFromJson(json);
 
 @override final  String id;
@@ -501,10 +510,16 @@ class _MediaItemSummary extends MediaItemSummary {
 @override final  String libraryId;
 @override final  String title;
 @override final  String overview;
+@override final  String? posterImageUrl;
+@override final  String? backdropImageUrl;
+@override final  String? thumbImageUrl;
 @override@JsonKey() final  int runtimeSeconds;
 @override@JsonKey() final  double progress;
 @override@JsonKey() final  bool isFavorite;
 @override@JsonKey() final  bool isResumable;
+@override@JsonKey() final  String mediaType;
+@override final  String? seriesId;
+@override final  String? seriesTitle;
 @override final  int? year;
 
 /// Create a copy of MediaItemSummary
@@ -520,16 +535,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MediaItemSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.serverId, serverId) || other.serverId == serverId)&&(identical(other.libraryId, libraryId) || other.libraryId == libraryId)&&(identical(other.title, title) || other.title == title)&&(identical(other.overview, overview) || other.overview == overview)&&(identical(other.runtimeSeconds, runtimeSeconds) || other.runtimeSeconds == runtimeSeconds)&&(identical(other.progress, progress) || other.progress == progress)&&(identical(other.isFavorite, isFavorite) || other.isFavorite == isFavorite)&&(identical(other.isResumable, isResumable) || other.isResumable == isResumable)&&(identical(other.year, year) || other.year == year));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MediaItemSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.serverId, serverId) || other.serverId == serverId)&&(identical(other.libraryId, libraryId) || other.libraryId == libraryId)&&(identical(other.title, title) || other.title == title)&&(identical(other.overview, overview) || other.overview == overview)&&(identical(other.posterImageUrl, posterImageUrl) || other.posterImageUrl == posterImageUrl)&&(identical(other.backdropImageUrl, backdropImageUrl) || other.backdropImageUrl == backdropImageUrl)&&(identical(other.thumbImageUrl, thumbImageUrl) || other.thumbImageUrl == thumbImageUrl)&&(identical(other.runtimeSeconds, runtimeSeconds) || other.runtimeSeconds == runtimeSeconds)&&(identical(other.progress, progress) || other.progress == progress)&&(identical(other.isFavorite, isFavorite) || other.isFavorite == isFavorite)&&(identical(other.isResumable, isResumable) || other.isResumable == isResumable)&&(identical(other.mediaType, mediaType) || other.mediaType == mediaType)&&(identical(other.seriesId, seriesId) || other.seriesId == seriesId)&&(identical(other.seriesTitle, seriesTitle) || other.seriesTitle == seriesTitle)&&(identical(other.year, year) || other.year == year));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,serverId,libraryId,title,overview,runtimeSeconds,progress,isFavorite,isResumable,year);
+int get hashCode => Object.hash(runtimeType,id,serverId,libraryId,title,overview,posterImageUrl,backdropImageUrl,thumbImageUrl,runtimeSeconds,progress,isFavorite,isResumable,mediaType,seriesId,seriesTitle,year);
 
 @override
 String toString() {
-  return 'MediaItemSummary(id: $id, serverId: $serverId, libraryId: $libraryId, title: $title, overview: $overview, runtimeSeconds: $runtimeSeconds, progress: $progress, isFavorite: $isFavorite, isResumable: $isResumable, year: $year)';
+  return 'MediaItemSummary(id: $id, serverId: $serverId, libraryId: $libraryId, title: $title, overview: $overview, posterImageUrl: $posterImageUrl, backdropImageUrl: $backdropImageUrl, thumbImageUrl: $thumbImageUrl, runtimeSeconds: $runtimeSeconds, progress: $progress, isFavorite: $isFavorite, isResumable: $isResumable, mediaType: $mediaType, seriesId: $seriesId, seriesTitle: $seriesTitle, year: $year)';
 }
 
 
@@ -540,7 +555,7 @@ abstract mixin class _$MediaItemSummaryCopyWith<$Res> implements $MediaItemSumma
   factory _$MediaItemSummaryCopyWith(_MediaItemSummary value, $Res Function(_MediaItemSummary) _then) = __$MediaItemSummaryCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String serverId, String libraryId, String title, String overview, int runtimeSeconds, double progress, bool isFavorite, bool isResumable, int? year
+ String id, String serverId, String libraryId, String title, String overview, String? posterImageUrl, String? backdropImageUrl, String? thumbImageUrl, int runtimeSeconds, double progress, bool isFavorite, bool isResumable, String mediaType, String? seriesId, String? seriesTitle, int? year
 });
 
 
@@ -557,18 +572,24 @@ class __$MediaItemSummaryCopyWithImpl<$Res>
 
 /// Create a copy of MediaItemSummary
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? serverId = null,Object? libraryId = null,Object? title = null,Object? overview = null,Object? runtimeSeconds = null,Object? progress = null,Object? isFavorite = null,Object? isResumable = null,Object? year = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? serverId = null,Object? libraryId = null,Object? title = null,Object? overview = null,Object? posterImageUrl = freezed,Object? backdropImageUrl = freezed,Object? thumbImageUrl = freezed,Object? runtimeSeconds = null,Object? progress = null,Object? isFavorite = null,Object? isResumable = null,Object? mediaType = null,Object? seriesId = freezed,Object? seriesTitle = freezed,Object? year = freezed,}) {
   return _then(_MediaItemSummary(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,serverId: null == serverId ? _self.serverId : serverId // ignore: cast_nullable_to_non_nullable
 as String,libraryId: null == libraryId ? _self.libraryId : libraryId // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,overview: null == overview ? _self.overview : overview // ignore: cast_nullable_to_non_nullable
-as String,runtimeSeconds: null == runtimeSeconds ? _self.runtimeSeconds : runtimeSeconds // ignore: cast_nullable_to_non_nullable
+as String,posterImageUrl: freezed == posterImageUrl ? _self.posterImageUrl : posterImageUrl // ignore: cast_nullable_to_non_nullable
+as String?,backdropImageUrl: freezed == backdropImageUrl ? _self.backdropImageUrl : backdropImageUrl // ignore: cast_nullable_to_non_nullable
+as String?,thumbImageUrl: freezed == thumbImageUrl ? _self.thumbImageUrl : thumbImageUrl // ignore: cast_nullable_to_non_nullable
+as String?,runtimeSeconds: null == runtimeSeconds ? _self.runtimeSeconds : runtimeSeconds // ignore: cast_nullable_to_non_nullable
 as int,progress: null == progress ? _self.progress : progress // ignore: cast_nullable_to_non_nullable
 as double,isFavorite: null == isFavorite ? _self.isFavorite : isFavorite // ignore: cast_nullable_to_non_nullable
 as bool,isResumable: null == isResumable ? _self.isResumable : isResumable // ignore: cast_nullable_to_non_nullable
-as bool,year: freezed == year ? _self.year : year // ignore: cast_nullable_to_non_nullable
+as bool,mediaType: null == mediaType ? _self.mediaType : mediaType // ignore: cast_nullable_to_non_nullable
+as String,seriesId: freezed == seriesId ? _self.seriesId : seriesId // ignore: cast_nullable_to_non_nullable
+as String?,seriesTitle: freezed == seriesTitle ? _self.seriesTitle : seriesTitle // ignore: cast_nullable_to_non_nullable
+as String?,year: freezed == year ? _self.year : year // ignore: cast_nullable_to_non_nullable
 as int?,
   ));
 }
