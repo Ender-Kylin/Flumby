@@ -14,6 +14,9 @@ class SearchResultGroup {
   MediaItemSummary get primaryItem => items.first;
 
   bool get isClustered => items.length > 1 || primaryItem.isSeries;
+
+  int get relatedEpisodeCount =>
+      items.where((item) => item.mediaType == 'Episode').length;
 }
 
 List<MediaItemSummary> refineSearchResults(

@@ -43,10 +43,7 @@ void main() {
       expect(queryParameters['SearchTerm'], 'dune');
       expect(queryParameters['Recursive'], isTrue);
       expect(queryParameters['Limit'], 25);
-      expect(
-        queryParameters['IncludeItemTypes'],
-        'Series,Movie,Episode,Video',
-      );
+      expect(queryParameters['IncludeItemTypes'], 'Series,Movie,Episode,Video');
 
       return Response(
         requestOptions: RequestOptions(path: path),
@@ -187,4 +184,141 @@ void main() {
     expect(detail.thumbImageUrl, contains('/Items/item-1/Images/Thumb'));
     expect(detail.isFavorite, isTrue);
   });
+
+  test(
+    'fetchItemDetail loads seasons and ordered episodes for series items',
+    () async {
+      final dio = _MockDio();
+      final adapter = EmbyAdapter(dio);
+      final session = MediaServerSession(
+        server: MediaServerProfile(
+          id: 'emby-1',
+          name: 'Local Emby',
+          baseUrl: 'http://127.0.0.1:8096',
+          type: MediaServerType.emby,
+          username: 'tester',
+          isOnline: true,
+          updatedAt: DateTime.utc(2026, 3, 25),
+        ),
+        accessToken: 'token-123',
+        userId: 'user-123',
+      );
+
+      when(
+        () => dio.get<Map<String, dynamic>>(
+          any(),
+          options: any(named: 'options'),
+          queryParameters: any(named: 'queryParameters'),
+        ),
+      ).thenAnswer((invocation) async {
+        final path = invocation.positionalArguments.first as String;
+        final queryParameters =
+            invocation.namedArguments[#queryParameters]
+                as Map<String, dynamic>?;
+
+        if (path.endsWith('/Users/user-123/Items/series-1')) {
+          return Response(
+            requestOptions: RequestOptions(path: path),
+            data: {
+              'Id': 'series-1',
+              'Name': '斩神之凡尘神域',
+              'Overview': 'Series overview.',
+              'ImageTags': {
+                'Primary': 'series-poster',
+                'Thumb': 'series-thumb',
+              },
+              'BackdropImageTags': ['series-backdrop'],
+              'ProductionYear': 2024,
+              'Type': 'Series',
+              'Genres': ['动画', 'Sci-Fi'],
+            },
+          );
+        }
+
+        if (path.endsWith('/Users/user-123/Items') &&
+            queryParameters?['IncludeItemTypes'] == 'Season') {
+          return Response(
+            requestOptions: RequestOptions(path: path),
+            data: {
+              'Items': [
+                {'Id': 'season-2', 'Name': 'Season 2', 'IndexNumber': 2},
+                {'Id': 'season-1', 'Name': 'Season 1', 'IndexNumber': 1},
+              ],
+            },
+          );
+        }
+
+        if (path.endsWith('/Users/user-123/Items') &&
+            queryParameters?['IncludeItemTypes'] == 'Episode') {
+          return Response(
+            requestOptions: RequestOptions(path: path),
+            data: {
+              'Items': [
+                {
+                  'Id': 'episode-2',
+                  'ParentId': 'season-1',
+                  'Name': '第二集',
+                  'Overview': 'Episode 2',
+                  'ImageTags': {'Primary': 'ep2-poster'},
+                  'IndexNumber': 2,
+                  'ParentIndexNumber': 1,
+                  'RunTimeTicks': 14400000000,
+                  'UserData': {'PlayedPercentage': 12},
+                },
+                {
+                  'Id': 'episode-1',
+                  'ParentId': 'season-1',
+                  'Name': '第一集',
+                  'Overview': 'Episode 1',
+                  'ImageTags': {'Primary': 'ep1-poster'},
+                  'IndexNumber': 1,
+                  'ParentIndexNumber': 1,
+                  'RunTimeTicks': 14400000000,
+                  'UserData': {
+                    'PlaybackPositionTicks': 180000000,
+                    'PlayedPercentage': 38,
+                    'LastPlayedDate': '2026-03-24T12:00:00Z',
+                  },
+                },
+                {
+                  'Id': 'episode-3',
+                  'ParentId': 'season-2',
+                  'Name': '第一集',
+                  'Overview': 'Season 2 episode 1',
+                  'ImageTags': {'Primary': 'ep3-poster'},
+                  'IndexNumber': 1,
+                  'ParentIndexNumber': 2,
+                  'RunTimeTicks': 14400000000,
+                },
+              ],
+            },
+          );
+        }
+
+        throw StateError('Unexpected path/query: $path / $queryParameters');
+      });
+
+      final detail = await adapter.fetchItemDetail(
+        session: session,
+        itemId: 'series-1',
+      );
+
+      expect(detail.mediaType, 'Series');
+      expect(detail.isPlayable, isFalse);
+      expect(detail.seriesSeasons, hasLength(2));
+      expect(detail.seriesSeasons.first.seasonNumber, 1);
+      expect(detail.seriesSeasons.first.episodes, hasLength(2));
+      expect(detail.seriesSeasons.first.episodes.map((episode) => episode.id), [
+        'episode-1',
+        'episode-2',
+      ]);
+      expect(detail.seriesSeasons.first.episodes.first.isResumable, isTrue);
+      expect(
+        detail.seriesSeasons.first.episodes.first.lastPlayedAt,
+        DateTime.utc(2026, 3, 24, 12),
+      );
+      expect(detail.seriesSeasons.last.seasonNumber, 2);
+      expect(detail.seriesSeasons.last.episodes.single.id, 'episode-3');
+    },
+  );
 }

@@ -133,6 +133,9 @@ class EmbyAdapter implements MediaServerAdapter {
     final data = response.data ?? const <String, dynamic>{};
     final mediaType = data['Type']?.toString() ?? 'Video';
     final isPlayableType = _isPlayableMediaType(mediaType);
+    final seriesSeasons = mediaType == 'Series'
+        ? await _fetchSeriesSeasons(session: session, seriesId: itemId)
+        : const <SeriesSeasonSummary>[];
     final playbackInfo = isPlayableType
         ? (await _dio.get<Map<String, dynamic>>(
                 '${session.server.baseUrl}/Items/$itemId/PlaybackInfo',
@@ -187,6 +190,7 @@ class EmbyAdapter implements MediaServerAdapter {
       streamUrl: isPlayableType ? playbackSource.uri.toString() : '',
       mediaSourceId: playbackSource.mediaSourceId,
       playSessionId: playbackSource.playSessionId,
+      seriesSeasons: seriesSeasons,
     );
   }
 
@@ -457,6 +461,253 @@ class EmbyAdapter implements MediaServerAdapter {
       'Movie' || 'Episode' || 'Video' => true,
       _ => false,
     };
+  }
+
+  Future<List<SeriesSeasonSummary>> _fetchSeriesSeasons({
+    required MediaServerSession session,
+    required String seriesId,
+  }) async {
+    final seasonsResponse = await _dio.get<Map<String, dynamic>>(
+      '${session.server.baseUrl}/Users/${session.userId}/Items',
+      options: Options(headers: _headers(session.accessToken)),
+      queryParameters: {
+        'ParentId': seriesId,
+        'Recursive': false,
+        'IncludeItemTypes': 'Season',
+        'Fields':
+            'Overview,UserData,ProductionYear,ImageTags,BackdropImageTags,IndexNumber,SortName',
+      },
+    );
+    final episodesResponse = await _dio.get<Map<String, dynamic>>(
+      '${session.server.baseUrl}/Users/${session.userId}/Items',
+      options: Options(headers: _headers(session.accessToken)),
+      queryParameters: {
+        'ParentId': seriesId,
+        'Recursive': true,
+        'IncludeItemTypes': 'Episode',
+        'Fields':
+            'Overview,UserData,ProductionYear,PrimaryImageAspectRatio,ImageTags,BackdropImageTags,IndexNumber,ParentIndexNumber,PremiereDate,SortName',
+      },
+    );
+
+    final seasonItems =
+        (seasonsResponse.data?['Items'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .toList(growable: false);
+    final episodeItems =
+        (episodesResponse.data?['Items'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .toList(growable: false);
+
+    final baseSeasons = _buildSeasonSummaries(
+      session: session,
+      seriesId: seriesId,
+      seasonItems: seasonItems,
+      episodeItems: episodeItems,
+    );
+    if (baseSeasons.isEmpty) {
+      return const [];
+    }
+
+    final seasonNumberToId = <int, String>{
+      for (final season in baseSeasons)
+        if (season.seasonNumber != null) season.seasonNumber!: season.id,
+    };
+    final episodeBuckets = <String, List<SeriesEpisodeSummary>>{
+      for (final season in baseSeasons) season.id: <SeriesEpisodeSummary>[],
+    };
+
+    for (final item in episodeItems) {
+      final mappedEpisode = _mapSeriesEpisode(
+        session: session,
+        serverId: session.server.id,
+        item: item,
+      );
+      final resolvedSeasonId = _resolveSeasonIdForEpisode(
+        episode: mappedEpisode,
+        seriesId: seriesId,
+        knownSeasonIds: episodeBuckets.keys.toSet(),
+        seasonNumberToId: seasonNumberToId,
+        fallbackSeasonId: baseSeasons.first.id,
+      );
+      episodeBuckets[resolvedSeasonId]!.add(
+        mappedEpisode.copyWith(
+          seasonId: resolvedSeasonId,
+          seasonNumber:
+              baseSeasons
+                  .firstWhere((season) => season.id == resolvedSeasonId)
+                  .seasonNumber ??
+              mappedEpisode.seasonNumber,
+        ),
+      );
+    }
+
+    return [
+      for (final season in _sortSeasons(baseSeasons))
+        season.copyWith(
+          episodes: _sortEpisodes(episodeBuckets[season.id] ?? const []),
+        ),
+    ];
+  }
+
+  List<SeriesSeasonSummary> _buildSeasonSummaries({
+    required MediaServerSession session,
+    required String seriesId,
+    required List<Map<String, dynamic>> seasonItems,
+    required List<Map<String, dynamic>> episodeItems,
+  }) {
+    if (seasonItems.isNotEmpty) {
+      return seasonItems
+          .map(
+            (item) => SeriesSeasonSummary(
+              id: item['Id']?.toString() ?? '',
+              title: item['Name']?.toString() ?? '',
+              seasonNumber: (item['IndexNumber'] as num?)?.toInt(),
+              imageUrl:
+                  _resolvePosterImageUrl(session: session, item: item) ??
+                  _resolveThumbImageUrl(session: session, item: item) ??
+                  _resolveBackdropImageUrl(session: session, item: item),
+            ),
+          )
+          .where((season) => season.id.isNotEmpty)
+          .toList(growable: false);
+    }
+
+    if (episodeItems.isEmpty) {
+      return const [];
+    }
+
+    final seasonNumbers =
+        episodeItems
+            .map((item) => (item['ParentIndexNumber'] as num?)?.toInt() ?? 1)
+            .toSet()
+            .toList()
+          ..sort();
+
+    return [
+      for (final seasonNumber in seasonNumbers)
+        SeriesSeasonSummary(
+          id: '$seriesId-season-$seasonNumber',
+          title: 'Season $seasonNumber',
+          seasonNumber: seasonNumber,
+        ),
+    ];
+  }
+
+  SeriesEpisodeSummary _mapSeriesEpisode({
+    required MediaServerSession session,
+    required String serverId,
+    required Map<String, dynamic> item,
+  }) {
+    final userData =
+        item['UserData'] as Map<String, dynamic>? ?? const <String, dynamic>{};
+    return SeriesEpisodeSummary(
+      id: item['Id']?.toString() ?? '',
+      serverId: serverId,
+      seasonId: item['ParentId']?.toString() ?? '',
+      title: item['Name']?.toString() ?? 'Untitled Episode',
+      overview: item['Overview']?.toString() ?? 'No overview',
+      posterImageUrl: _resolvePosterImageUrl(session: session, item: item),
+      backdropImageUrl: _resolveBackdropImageUrl(session: session, item: item),
+      thumbImageUrl: _resolveThumbImageUrl(session: session, item: item),
+      runtimeSeconds:
+          ((item['RunTimeTicks'] as num?)?.toDouble() ?? 0) ~/ 10000000,
+      progress:
+          (((userData['PlayedPercentage'] as num?)?.toDouble() ?? 0) / 100)
+              .clamp(0, 1),
+      isFavorite: userData['IsFavorite'] == true,
+      isResumable:
+          ((userData['PlaybackPositionTicks'] as num?)?.toDouble() ?? 0) > 0,
+      seasonNumber: (item['ParentIndexNumber'] as num?)?.toInt(),
+      episodeNumber: (item['IndexNumber'] as num?)?.toInt(),
+      lastPlayedAt: _parseDateTime(userData['LastPlayedDate']),
+      premiereDate: _parseDateTime(item['PremiereDate']),
+    );
+  }
+
+  String _resolveSeasonIdForEpisode({
+    required SeriesEpisodeSummary episode,
+    required String seriesId,
+    required Set<String> knownSeasonIds,
+    required Map<int, String> seasonNumberToId,
+    required String fallbackSeasonId,
+  }) {
+    if (episode.seasonId.isNotEmpty &&
+        knownSeasonIds.contains(episode.seasonId)) {
+      return episode.seasonId;
+    }
+    final seasonNumber = episode.seasonNumber;
+    if (seasonNumber != null && seasonNumberToId.containsKey(seasonNumber)) {
+      return seasonNumberToId[seasonNumber]!;
+    }
+    if (episode.seasonId.isNotEmpty && episode.seasonId != seriesId) {
+      return episode.seasonId;
+    }
+    return fallbackSeasonId;
+  }
+
+  List<SeriesSeasonSummary> _sortSeasons(List<SeriesSeasonSummary> seasons) {
+    final sorted = [...seasons]
+      ..sort((left, right) {
+        final seasonCompare = _compareNullableInts(
+          left.seasonNumber,
+          right.seasonNumber,
+        );
+        if (seasonCompare != 0) {
+          return seasonCompare;
+        }
+        return left.displayTitle.compareTo(right.displayTitle);
+      });
+    return sorted;
+  }
+
+  List<SeriesEpisodeSummary> _sortEpisodes(
+    List<SeriesEpisodeSummary> episodes,
+  ) {
+    final sorted = [...episodes]
+      ..sort((left, right) {
+        final episodeCompare = _compareNullableInts(
+          left.episodeNumber,
+          right.episodeNumber,
+        );
+        if (episodeCompare != 0) {
+          return episodeCompare;
+        }
+
+        final leftPremiere = left.premiereDate;
+        final rightPremiere = right.premiereDate;
+        if (leftPremiere != null && rightPremiere != null) {
+          final premiereCompare = leftPremiere.compareTo(rightPremiere);
+          if (premiereCompare != 0) {
+            return premiereCompare;
+          }
+        } else if (leftPremiere != null || rightPremiere != null) {
+          return leftPremiere == null ? 1 : -1;
+        }
+
+        return left.title.compareTo(right.title);
+      });
+    return sorted;
+  }
+
+  int _compareNullableInts(int? left, int? right) {
+    if (left != null && right != null) {
+      return left.compareTo(right);
+    }
+    if (left != null) {
+      return -1;
+    }
+    if (right != null) {
+      return 1;
+    }
+    return 0;
+  }
+
+  DateTime? _parseDateTime(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    return DateTime.tryParse(value.toString())?.toUtc();
   }
 
   String? _resolvePosterImageUrl({

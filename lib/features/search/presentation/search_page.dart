@@ -227,11 +227,6 @@ class _SearchResultsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final groups = buildSearchResultGroups(results);
-    final clusteredGroups = groups.where((group) => group.isClustered).toList();
-    final standaloneItems = groups
-        .where((group) => !group.isClustered)
-        .map((group) => group.primaryItem)
-        .toList(growable: false);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,106 +239,82 @@ class _SearchResultsView extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          'Exact title and series matches are ranked first, and related episodes stay grouped together.',
+          'Series stay collapsed in search results. Open a show to pick seasons and episodes from its detail page.',
           style: Theme.of(
             context,
           ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
         ),
-        if (clusteredGroups.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          for (final group in clusteredGroups) ...[
-            _GroupedSearchSection(group: group),
-            const SizedBox(height: 28),
-          ],
-        ],
-        if (standaloneItems.isNotEmpty) ...[
-          Text(
-            clusteredGroups.isEmpty ? 'Matches' : 'Other Matches',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 16),
-          MediaPosterGrid(
-            items: standaloneItems,
-            onItemTap: (item) => _openDetail(context, item),
-          ),
-        ],
+        const SizedBox(height: 20),
+        _SearchResultsGrid(groups: groups),
       ],
-    );
-  }
-
-  void _openDetail(BuildContext context, MediaItemSummary item) {
-    context.push(
-      Uri(
-        path: '/detail/${item.serverId}/${item.id}',
-        queryParameters: {'title': item.title},
-      ).toString(),
     );
   }
 }
 
-class _GroupedSearchSection extends StatelessWidget {
-  const _GroupedSearchSection({required this.group});
+class _SearchResultsGrid extends StatelessWidget {
+  const _SearchResultsGrid({required this.groups});
 
-  final SearchResultGroup group;
+  final List<SearchResultGroup> groups;
 
   @override
   Widget build(BuildContext context) {
-    final caption = switch ((group.primaryItem.mediaType, group.items.length)) {
-      ('Series', final count) when count > 1 =>
-        'Series · $count related matches',
-      ('Series', _) => 'Series',
-      (_, final count) when count > 1 => '$count related matches',
-      _ => group.primaryItem.mediaType,
-    };
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final crossAxisCount = switch (width) {
+          >= 1500 => 6,
+          >= 1220 => 5,
+          >= 980 => 4,
+          >= 720 => 3,
+          _ => 2,
+        };
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          group.title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          caption,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
-        ),
-        const SizedBox(height: 14),
-        SizedBox(
-          height: PosterMediaCard.cardHeight,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: group.items.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 18),
-            itemBuilder: (context, index) {
-              final item = group.items[index];
-              return SizedBox(
-                width: PosterMediaCard.cardWidth,
-                child: PosterMediaCard(
-                  title: item.title,
-                  subtitle: item.isSeries
-                      ? item.mediaType
-                      : item.searchGroupTitle,
-                  imageUrl:
-                      item.posterImageUrl ??
-                      item.thumbImageUrl ??
-                      item.backdropImageUrl,
-                  progress: item.isResumable ? item.progress : null,
-                  isFavorite: item.isFavorite,
-                  onTap: () => _openDetail(context, item),
-                ),
-              );
-            },
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: groups.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 18,
+            mainAxisSpacing: 18,
+            mainAxisExtent: 360,
           ),
-        ),
-      ],
+          itemBuilder: (context, index) {
+            final group = groups[index];
+            final item = group.primaryItem;
+            return PosterMediaCard(
+              title: group.title,
+              subtitle: _subtitleForGroup(group),
+              imageUrl:
+                  item.posterImageUrl ??
+                  item.thumbImageUrl ??
+                  item.backdropImageUrl,
+              progress: item.isResumable ? item.progress : null,
+              isFavorite: item.isFavorite,
+              onTap: () => _openDetail(context, item),
+            );
+          },
+        );
+      },
     );
+  }
+
+  String _subtitleForGroup(SearchResultGroup group) {
+    final item = group.primaryItem;
+    if (item.isSeries) {
+      final episodeCount = group.relatedEpisodeCount;
+      if (episodeCount > 0) {
+        return 'Series • $episodeCount episodes';
+      }
+      return 'Series';
+    }
+
+    final parts = <String>[
+      item.mediaType,
+      if (item.year != null) item.year.toString(),
+      if (item.runtimeSeconds > 0) '${(item.runtimeSeconds / 60).round()} min',
+    ];
+    return parts.join(' • ');
   }
 
   void _openDetail(BuildContext context, MediaItemSummary item) {
