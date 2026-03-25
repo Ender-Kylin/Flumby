@@ -79,8 +79,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     return ListView(
       padding: const EdgeInsets.only(bottom: 32),
       children: [
-        _LibraryHero(server: activeServer),
-        const SizedBox(height: 24),
         switch (activeSession) {
           AsyncLoading() => const Center(child: CircularProgressIndicator()),
           AsyncError(:final error) => _LibraryFailureCard(
@@ -111,47 +109,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   ),
         },
       ],
-    );
-  }
-}
-
-class _LibraryHero extends StatelessWidget {
-  const _LibraryHero({required this.server});
-
-  final MediaServerProfile server;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(32),
-      child: Container(
-        padding: const EdgeInsets.all(28),
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF111B28), Color(0xFF1D3250)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${server.name} 的媒体库',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '先选择一个媒体库，再以海报网格浏览其中的电影、剧集和视频。',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(color: Colors.white70),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
