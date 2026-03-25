@@ -99,6 +99,171 @@ void main() {
     );
   });
 
+  test(
+    'fetchLibraries uses recursive media totals instead of ChildCount',
+    () async {
+      final dio = _MockDio();
+      final adapter = EmbyAdapter(dio);
+      final session = MediaServerSession(
+        server: MediaServerProfile(
+          id: 'emby-1',
+          name: 'Local Emby',
+          baseUrl: 'http://127.0.0.1:8096',
+          type: MediaServerType.emby,
+          username: 'tester',
+          isOnline: true,
+          updatedAt: DateTime.utc(2026, 3, 25),
+        ),
+        accessToken: 'token-123',
+        userId: 'user-123',
+      );
+
+      when(
+        () => dio.get<Map<String, dynamic>>(
+          any(),
+          options: any(named: 'options'),
+          queryParameters: any(named: 'queryParameters'),
+        ),
+      ).thenAnswer((invocation) async {
+        final path = invocation.positionalArguments.first as String;
+        final queryParameters =
+            invocation.namedArguments[#queryParameters]
+                as Map<String, dynamic>?;
+
+        if (path.endsWith('/Users/user-123/Views')) {
+          return Response(
+            requestOptions: RequestOptions(path: path),
+            data: {
+              'Items': [
+                {
+                  'Id': 'library-anime',
+                  'Name': '动漫',
+                  'CollectionType': 'tvshows',
+                  'ChildCount': 1,
+                },
+                {
+                  'Id': 'library-movie',
+                  'Name': '动画电影',
+                  'CollectionType': 'movies',
+                  'ChildCount': 1,
+                },
+              ],
+            },
+          );
+        }
+
+        if (path.endsWith('/Users/user-123/Items') &&
+            queryParameters?['ParentId'] == 'library-anime') {
+          expect(queryParameters?['Recursive'], isTrue);
+          expect(queryParameters?['Limit'], 1);
+          expect(queryParameters?['IncludeItemTypes'], 'Series,Movie,Video');
+          return Response(
+            requestOptions: RequestOptions(path: path),
+            data: {
+              'TotalRecordCount': 42,
+              'Items': [
+                {'Id': 'series-1'},
+              ],
+            },
+          );
+        }
+
+        if (path.endsWith('/Users/user-123/Items') &&
+            queryParameters?['ParentId'] == 'library-movie') {
+          expect(queryParameters?['Recursive'], isTrue);
+          expect(queryParameters?['Limit'], 1);
+          expect(queryParameters?['IncludeItemTypes'], 'Series,Movie,Video');
+          return Response(
+            requestOptions: RequestOptions(path: path),
+            data: {
+              'TotalRecordCount': 18,
+              'Items': [
+                {'Id': 'movie-1'},
+              ],
+            },
+          );
+        }
+
+        throw StateError('Unexpected path/query: $path / $queryParameters');
+      });
+
+      final libraries = await adapter.fetchLibraries(session);
+
+      expect(libraries, hasLength(2));
+      expect(libraries[0].title, '动漫');
+      expect(libraries[0].itemCount, 42);
+      expect(libraries[1].title, '动画电影');
+      expect(libraries[1].itemCount, 18);
+    },
+  );
+
+  test('fetchItems includes series entries for library browsing', () async {
+    final dio = _MockDio();
+    final adapter = EmbyAdapter(dio);
+    final session = MediaServerSession(
+      server: MediaServerProfile(
+        id: 'emby-1',
+        name: 'Local Emby',
+        baseUrl: 'http://127.0.0.1:8096',
+        type: MediaServerType.emby,
+        username: 'tester',
+        isOnline: true,
+        updatedAt: DateTime.utc(2026, 3, 25),
+      ),
+      accessToken: 'token-123',
+      userId: 'user-123',
+    );
+
+    when(
+      () => dio.get<Map<String, dynamic>>(
+        any(),
+        options: any(named: 'options'),
+        queryParameters: any(named: 'queryParameters'),
+      ),
+    ).thenAnswer((invocation) async {
+      final path = invocation.positionalArguments.first as String;
+      final queryParameters =
+          invocation.namedArguments[#queryParameters]! as Map<String, dynamic>;
+
+      expect(path, contains('/Users/user-123/Items'));
+      expect(queryParameters['ParentId'], 'library-anime');
+      expect(queryParameters['Recursive'], isTrue);
+      expect(queryParameters['IncludeItemTypes'], 'Series,Movie,Video');
+
+      return Response(
+        requestOptions: RequestOptions(path: path),
+        data: {
+          'Items': [
+            {
+              'Id': 'series-1',
+              'ParentId': 'library-anime',
+              'Name': '药屋少女的呢喃',
+              'Overview': 'Series overview.',
+              'Type': 'Series',
+              'ProductionYear': 2023,
+              'ImageTags': {'Primary': 'series-poster'},
+            },
+          ],
+        },
+      );
+    });
+
+    final items = await adapter.fetchItems(
+      session: session,
+      libraryId: 'library-anime',
+    );
+
+    expect(items, hasLength(1));
+    expect(items.single.id, 'series-1');
+    expect(items.single.mediaType, 'Series');
+    expect(items.single.title, '药屋少女的呢喃');
+    expect(items.single.year, 2023);
+    expect(
+      items.single.posterImageUrl,
+      contains('/Items/series-1/Images/Primary'),
+    );
+  });
+
   test('fetchItemDetail uses PlaybackInfo URLs and playback ids', () async {
     final dio = _MockDio();
     final adapter = EmbyAdapter(dio);

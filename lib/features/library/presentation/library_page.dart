@@ -49,6 +49,36 @@ class LibraryScreen extends ConsumerStatefulWidget {
 class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   String? _selectedLibraryId;
 
+  Future<void> _refreshLibrary() async {
+    final session = await ref.refresh(activeServerSessionProvider.future);
+    if (session == null) {
+      ref.invalidate(activeLibrariesProvider);
+      return;
+    }
+
+    final libraries = await ref.refresh(activeLibrariesProvider.future);
+    if (!mounted || libraries.isEmpty) {
+      return;
+    }
+
+    final targetLibraryId =
+        libraries.any((library) => library.id == _selectedLibraryId)
+        ? _selectedLibraryId!
+        : libraries.first.id;
+    if (_selectedLibraryId != targetLibraryId) {
+      setState(() {
+        _selectedLibraryId = targetLibraryId;
+      });
+    }
+
+    await ref.refresh(
+      libraryItemsProvider((
+        session: session,
+        libraryId: targetLibraryId,
+      )).future,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final serverRegistry = ref.watch(serverControllerProvider);
@@ -76,39 +106,43 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     }
 
     final activeSession = ref.watch(activeServerSessionProvider);
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 32),
-      children: [
-        switch (activeSession) {
-          AsyncLoading() => const Center(child: CircularProgressIndicator()),
-          AsyncError(:final error) => _LibraryFailureCard(
-            title: '媒体库登录检查失败',
-            error: error,
-          ),
-          AsyncData(:final value) =>
-            value == null
-                ? EmptyStateCard(
-                    icon: Icons.lock_outline_rounded,
-                    title: '需要登录',
-                    description:
-                        '当前服务器已没有保存的凭据，请先到服务器页面重新连接。',
-                    action: FilledButton.icon(
-                      onPressed: () => context.go('/servers'),
-                      icon: const Icon(Icons.storage_rounded),
-                      label: const Text('打开服务器'),
+    return RefreshIndicator(
+      onRefresh: _refreshLibrary,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 32),
+        children: [
+          switch (activeSession) {
+            AsyncLoading() => const Center(child: CircularProgressIndicator()),
+            AsyncError(:final error) => _LibraryFailureCard(
+              title: '媒体库登录检查失败',
+              error: error,
+            ),
+            AsyncData(:final value) =>
+              value == null
+                  ? EmptyStateCard(
+                      icon: Icons.lock_outline_rounded,
+                      title: '需要登录',
+                      description:
+                          '当前服务器已没有保存的凭据，请先到服务器页面重新连接。',
+                      action: FilledButton.icon(
+                        onPressed: () => context.go('/servers'),
+                        icon: const Icon(Icons.storage_rounded),
+                        label: const Text('打开服务器'),
+                      ),
+                    )
+                  : _LibraryBody(
+                      selectedLibraryId: _selectedLibraryId,
+                      onLibrarySelected: (value) {
+                        setState(() {
+                          _selectedLibraryId = value;
+                        });
+                      },
+                      session: value,
                     ),
-                  )
-                : _LibraryBody(
-                    selectedLibraryId: _selectedLibraryId,
-                    onLibrarySelected: (value) {
-                      setState(() {
-                        _selectedLibraryId = value;
-                      });
-                    },
-                    session: value,
-                  ),
-        },
-      ],
+          },
+        ],
+      ),
     );
   }
 }

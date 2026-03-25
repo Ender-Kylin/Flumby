@@ -29,6 +29,16 @@ final activeHomeFeedProvider = FutureProvider.autoDispose<HomeFeed?>((
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
+  Future<void> _refreshHome(WidgetRef ref) async {
+    final session = await ref.refresh(activeServerSessionProvider.future);
+    if (session == null) {
+      ref.invalidate(activeHomeFeedProvider);
+      return;
+    }
+
+    await ref.refresh(activeHomeFeedProvider.future);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final serverRegistry = ref.watch(serverControllerProvider);
@@ -60,40 +70,44 @@ class HomePage extends ConsumerWidget {
 
     final homeFeed = ref.watch(activeHomeFeedProvider);
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 32),
-      children: [
-        if (servers.length > 1) ...[
-          _HomeServerSwitcher(activeServer: activeServer, servers: servers),
-          const SizedBox(height: 24),
-        ],
-        switch (homeFeed) {
-          AsyncLoading() => const Center(child: CircularProgressIndicator()),
-          AsyncError(:final error) => _HomeFailureCard(error: error),
-          AsyncData(:final value) when value == null => EmptyStateCard(
-            icon: Icons.lock_outline_rounded,
-            title: '需要登录',
-            description:
-                '当前服务器已没有保存的凭据，请先到服务器页面重新连接。',
-            action: FilledButton.icon(
-              onPressed: () => context.go('/servers'),
-              icon: const Icon(Icons.storage_rounded),
-              label: const Text('打开服务器'),
-            ),
-          ),
-          AsyncData(:final value)
-              when value != null &&
-                  value.continueWatching.isEmpty &&
-                  value.sections.every((section) => section.items.isEmpty) =>
-            const EmptyStateCard(
-              icon: Icons.home_outlined,
-              title: '首页暂无可播放内容',
+    return RefreshIndicator(
+      onRefresh: () => _refreshHome(ref),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 32),
+        children: [
+          if (servers.length > 1) ...[
+            _HomeServerSwitcher(activeServer: activeServer, servers: servers),
+            const SizedBox(height: 24),
+          ],
+          switch (homeFeed) {
+            AsyncLoading() => const Center(child: CircularProgressIndicator()),
+            AsyncError(:final error) => _HomeFailureCard(error: error),
+            AsyncData(:final value) when value == null => EmptyStateCard(
+              icon: Icons.lock_outline_rounded,
+              title: '需要登录',
               description:
-                  'Emby 当前首页未返回可播放的电影、剧集或视频内容。',
+                  '当前服务器已没有保存的凭据，请先到服务器页面重新连接。',
+              action: FilledButton.icon(
+                onPressed: () => context.go('/servers'),
+                icon: const Icon(Icons.storage_rounded),
+                label: const Text('打开服务器'),
+              ),
             ),
-          AsyncData(:final value) => _HomeFeedView(feed: value!),
-        },
-      ],
+            AsyncData(:final value)
+                when value != null &&
+                    value.continueWatching.isEmpty &&
+                    value.sections.every((section) => section.items.isEmpty) =>
+              const EmptyStateCard(
+                icon: Icons.home_outlined,
+                title: '首页暂无可播放内容',
+                description:
+                    'Emby 当前首页未返回可播放的电影、剧集或视频内容。',
+              ),
+            AsyncData(:final value) => _HomeFeedView(feed: value!),
+          },
+        ],
+      ),
     );
   }
 }

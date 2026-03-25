@@ -11,6 +11,8 @@ import '../domain/server_models.dart';
 class EmbyAdapter implements MediaServerAdapter {
   EmbyAdapter(this._dio);
 
+  static const String _libraryBrowseItemTypes = 'Series,Movie,Video';
+
   final Dio _dio;
 
   @override
@@ -72,7 +74,7 @@ class EmbyAdapter implements MediaServerAdapter {
     );
 
     final items = response.data?['Items'] as List<dynamic>? ?? const [];
-    return items
+    final libraries = items
         .whereType<Map<String, dynamic>>()
         .map(
           (item) => LibrarySummary(
@@ -89,6 +91,19 @@ class EmbyAdapter implements MediaServerAdapter {
         )
         .where((library) => library.id.isNotEmpty)
         .toList(growable: false);
+
+    return Future.wait(
+      libraries.map(
+        (library) async => library.copyWith(
+          itemCount:
+              await _fetchLibraryItemCount(
+                session: session,
+                libraryId: library.id,
+              ) ??
+              library.itemCount,
+        ),
+      ),
+    );
   }
 
   @override
@@ -102,7 +117,7 @@ class EmbyAdapter implements MediaServerAdapter {
       queryParameters: {
         'ParentId': libraryId,
         'Recursive': true,
-        'IncludeItemTypes': 'Movie,Episode,Video',
+        'IncludeItemTypes': _libraryBrowseItemTypes,
         'Fields':
             'Overview,MediaSources,UserData,ProductionYear,PrimaryImageAspectRatio,ImageTags,BackdropImageTags',
       },
@@ -407,6 +422,33 @@ class EmbyAdapter implements MediaServerAdapter {
       accessToken: body['AccessToken']?.toString() ?? '',
       userId: user['Id']?.toString() ?? '',
     );
+  }
+
+  Future<int?> _fetchLibraryItemCount({
+    required MediaServerSession session,
+    required String libraryId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '${session.server.baseUrl}/Users/${session.userId}/Items',
+        options: Options(headers: _headers(session.accessToken)),
+        queryParameters: {
+          'ParentId': libraryId,
+          'Recursive': true,
+          'Limit': 1,
+          'IncludeItemTypes': _libraryBrowseItemTypes,
+        },
+      );
+      final totalCount = (response.data?['TotalRecordCount'] as num?)?.toInt();
+      if (totalCount != null) {
+        return totalCount;
+      }
+
+      final items = response.data?['Items'] as List<dynamic>? ?? const [];
+      return items.whereType<Map<String, dynamic>>().length;
+    } on DioException {
+      return null;
+    }
   }
 
   List<MediaItemSummary> _itemsFromResponse(
