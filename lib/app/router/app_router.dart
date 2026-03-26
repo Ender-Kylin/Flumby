@@ -24,14 +24,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/servers',
-                builder: (context, state) => const ServerPage(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
                 path: '/home',
                 builder: (context, state) => const HomePage(),
               ),
@@ -42,6 +34,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/libraries',
                 builder: (context, state) => const LibraryScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/servers',
+                builder: (context, state) => const ServerPage(),
               ),
             ],
           ),

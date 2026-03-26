@@ -11,7 +11,17 @@ void main() {
         servers: [
           SyncServerRecord(
             id: 'emby-main',
-            name: 'Living Room Emby',
+            defaultName: 'Living Room Emby',
+            type: 'emby',
+            updatedAt: DateTime.utc(2026, 3, 25, 10),
+            deviceId: 'desktop-a',
+          ),
+        ],
+        serverLines: [
+          SyncServerLineRecord(
+            id: 'emby-main::https://emby.local',
+            serverId: 'emby-main',
+            customName: '内网',
             baseUrl: 'https://emby.local',
             type: 'emby',
             username: 'ender',

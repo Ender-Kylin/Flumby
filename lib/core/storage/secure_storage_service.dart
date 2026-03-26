@@ -12,6 +12,8 @@ class SecureStorageService {
 
   static const serverTokenPrefix = 'server.token.';
   static const serverUserIdPrefix = 'server.user_id.';
+  static const serverUsernamePrefix = 'server.username.';
+  static const serverPasswordPrefix = 'server.password.';
   static const syncCredentialPrefix = 'sync.credential.';
   static const deviceIdKey = 'device.id';
 
@@ -48,5 +50,13 @@ class SecureStorageService {
 
   String serverUserIdKey(String serverId) {
     return '$serverUserIdPrefix$serverId';
+  }
+
+  String serverUsernameKey(String serverId) {
+    return '$serverUsernamePrefix$serverId';
+  }
+
+  String serverPasswordKey(String serverId) {
+    return '$serverPasswordPrefix$serverId';
   }
 }

@@ -22,8 +22,8 @@ final searchResultsProvider = FutureProvider.autoDispose
       return runProtectedServerCall<List<MediaItemSummary>>(
         ref,
         session: request.session,
-        request: (adapter) =>
-            adapter.searchItems(session: request.session, query: request.query),
+        request: (adapter, session) =>
+            adapter.searchItems(session: session, query: request.query),
       );
     });
 
@@ -49,6 +49,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   @override
   Widget build(BuildContext context) {
     final activeServer = ref.watch(activeServerProvider);
+    final activeLine = ref.watch(activeServerLineProvider);
     final activeSession = ref.watch(activeServerSessionProvider);
     final scaffold = Scaffold(
       appBar: DesktopWindowFrame.isEnabled
@@ -59,6 +60,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         children: [
           _SearchHero(
             server: activeServer,
+            line: activeLine,
             controller: _queryController,
             onChanged: _handleQueryChanged,
           ),
@@ -119,11 +121,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 class _SearchHero extends StatelessWidget {
   const _SearchHero({
     required this.server,
+    required this.line,
     required this.controller,
     required this.onChanged,
   });
 
   final MediaServerProfile? server;
+  final MediaServerLine? line;
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
 
@@ -144,14 +148,16 @@ class _SearchHero extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              server?.name ?? '未选择当前服务器',
+              server == null || line == null
+                  ? '未选择当前服务器'
+                  : line!.displayName(server!.defaultName),
               style: Theme.of(
                 context,
               ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             Text(
-              server?.baseUrl ??
+              line?.baseUrl ??
                   '请先选择并登录 Emby 服务器后再进行搜索。',
               style: Theme.of(
                 context,

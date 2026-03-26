@@ -21,7 +21,7 @@ class EmbyAdapter implements MediaServerAdapter {
   @override
   Future<HomeFeed> fetchHome(MediaServerSession session) async {
     final resumeResponse = await _dio.get<Map<String, dynamic>>(
-      '${session.server.baseUrl}/Users/${session.userId}/Items/Resume',
+      '${session.line.baseUrl}/Users/${session.userId}/Items/Resume',
       options: Options(headers: _headers(session.accessToken)),
       queryParameters: const {
         'Limit': 12,
@@ -31,7 +31,7 @@ class EmbyAdapter implements MediaServerAdapter {
     );
 
     final latestResponse = await _dio.get<List<dynamic>>(
-      '${session.server.baseUrl}/Users/${session.userId}/Items/Latest',
+      '${session.line.baseUrl}/Users/${session.userId}/Items/Latest',
       options: Options(headers: _headers(session.accessToken)),
       queryParameters: const {
         'Limit': 24,
@@ -43,7 +43,7 @@ class EmbyAdapter implements MediaServerAdapter {
       continueWatching: _itemsFromResponse(
         resumeResponse.data?['Items'] as List<dynamic>? ?? const [],
         session: session,
-        serverId: session.server.id,
+        serverId: session.line.id,
         fallbackLibraryId: 'resume',
       ),
       sections: [
@@ -53,7 +53,7 @@ class EmbyAdapter implements MediaServerAdapter {
           items: _itemsFromResponse(
             latestResponse.data ?? const [],
             session: session,
-            serverId: session.server.id,
+            serverId: session.line.id,
             fallbackLibraryId: 'latest',
           ),
         ),
@@ -66,7 +66,7 @@ class EmbyAdapter implements MediaServerAdapter {
     MediaServerSession session,
   ) async {
     final response = await _dio.get<Map<String, dynamic>>(
-      '${session.server.baseUrl}/Users/${session.userId}/Views',
+      '${session.line.baseUrl}/Users/${session.userId}/Views',
       options: Options(headers: _headers(session.accessToken)),
       queryParameters: const {
         'Fields': 'PrimaryImageAspectRatio,ImageTags,BackdropImageTags',
@@ -79,7 +79,7 @@ class EmbyAdapter implements MediaServerAdapter {
         .map(
           (item) => LibrarySummary(
             id: item['Id']?.toString() ?? '',
-            serverId: session.server.id,
+            serverId: session.line.id,
             title: item['Name']?.toString() ?? 'Untitled Library',
             type: item['CollectionType']?.toString() ?? 'mixed',
             libraryImageUrl:
@@ -112,7 +112,7 @@ class EmbyAdapter implements MediaServerAdapter {
     required String libraryId,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
-      '${session.server.baseUrl}/Users/${session.userId}/Items',
+      '${session.line.baseUrl}/Users/${session.userId}/Items',
       options: Options(headers: _headers(session.accessToken)),
       queryParameters: {
         'ParentId': libraryId,
@@ -126,7 +126,7 @@ class EmbyAdapter implements MediaServerAdapter {
     return _itemsFromResponse(
       response.data?['Items'] as List<dynamic>? ?? const [],
       session: session,
-      serverId: session.server.id,
+      serverId: session.line.id,
       fallbackLibraryId: libraryId,
     );
   }
@@ -137,7 +137,7 @@ class EmbyAdapter implements MediaServerAdapter {
     required String itemId,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
-      '${session.server.baseUrl}/Users/${session.userId}/Items/$itemId',
+      '${session.line.baseUrl}/Users/${session.userId}/Items/$itemId',
       options: Options(headers: _headers(session.accessToken)),
       queryParameters: const {
         'Fields':
@@ -153,7 +153,7 @@ class EmbyAdapter implements MediaServerAdapter {
         : const <SeriesSeasonSummary>[];
     final playbackInfo = isPlayableType
         ? (await _dio.get<Map<String, dynamic>>(
-                '${session.server.baseUrl}/Items/$itemId/PlaybackInfo',
+                '${session.line.baseUrl}/Items/$itemId/PlaybackInfo',
                 options: Options(headers: _headers(session.accessToken)),
                 queryParameters: {
                   'UserId': session.userId,
@@ -181,7 +181,7 @@ class EmbyAdapter implements MediaServerAdapter {
         10000000;
     return MediaDetail(
       id: itemId,
-      serverId: session.server.id,
+      serverId: session.line.id,
       title: data['Name']?.toString() ?? 'Untitled',
       overview:
           data['Overview']?.toString() ?? 'No overview returned from Emby.',
@@ -216,7 +216,7 @@ class EmbyAdapter implements MediaServerAdapter {
     int limit = 50,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
-      '${session.server.baseUrl}/Users/${session.userId}/Items',
+      '${session.line.baseUrl}/Users/${session.userId}/Items',
       options: Options(headers: _headers(session.accessToken)),
       queryParameters: {
         'SearchTerm': query,
@@ -231,7 +231,7 @@ class EmbyAdapter implements MediaServerAdapter {
     final mappedItems = _itemsFromResponse(
       response.data?['Items'] as List<dynamic>? ?? const [],
       session: session,
-      serverId: session.server.id,
+      serverId: session.line.id,
       fallbackLibraryId: 'search',
     );
     return refineSearchResults(mappedItems, query);
@@ -243,7 +243,7 @@ class EmbyAdapter implements MediaServerAdapter {
     required PlaybackReport report,
   }) async {
     await _dio.post<void>(
-      '${session.server.baseUrl}/Sessions/Playing/Progress',
+      '${session.line.baseUrl}/Sessions/Playing/Progress',
       options: Options(headers: _headers(session.accessToken)),
       data: {
         'ItemId': report.itemId,
@@ -272,7 +272,7 @@ class EmbyAdapter implements MediaServerAdapter {
         'PlaySessionId': playSessionId,
     };
     return Uri.parse(
-      '${session.server.baseUrl}/Videos/$itemId/stream',
+      '${session.line.baseUrl}/Videos/$itemId/stream',
     ).replace(queryParameters: queryParameters);
   }
 
@@ -330,7 +330,7 @@ class EmbyAdapter implements MediaServerAdapter {
     String? transcodingUrl,
   }) {
     final candidate = _normalizePlaybackUrl(
-      baseUrl: session.server.baseUrl,
+      baseUrl: session.line.baseUrl,
       rawUrl: directStreamUrl,
       token: session.accessToken,
       mediaSourceId: mediaSourceId,
@@ -341,7 +341,7 @@ class EmbyAdapter implements MediaServerAdapter {
     }
 
     return _normalizePlaybackUrl(
-      baseUrl: session.server.baseUrl,
+      baseUrl: session.line.baseUrl,
       rawUrl: transcodingUrl,
       token: session.accessToken,
       mediaSourceId: mediaSourceId,
@@ -407,9 +407,17 @@ class EmbyAdapter implements MediaServerAdapter {
     final serverId = body['ServerId']?.toString().trim().isNotEmpty == true
         ? body['ServerId'].toString()
         : normalizedBaseUrl;
+    final defaultName = body['ServerName']?.toString() ?? 'Emby Server';
     final profile = MediaServerProfile(
       id: serverId,
-      name: body['ServerName']?.toString() ?? 'Emby Server',
+      defaultName: defaultName,
+      type: MediaServerType.emby,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    final line = MediaServerLine(
+      id: buildMediaServerLineId(serverId: serverId, baseUrl: normalizedBaseUrl),
+      serverId: serverId,
+      customName: request.customName,
       baseUrl: normalizedBaseUrl,
       type: MediaServerType.emby,
       username: request.username,
@@ -419,6 +427,7 @@ class EmbyAdapter implements MediaServerAdapter {
 
     return MediaServerSession(
       server: profile,
+      line: line,
       accessToken: body['AccessToken']?.toString() ?? '',
       userId: user['Id']?.toString() ?? '',
     );
@@ -430,7 +439,7 @@ class EmbyAdapter implements MediaServerAdapter {
   }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '${session.server.baseUrl}/Users/${session.userId}/Items',
+        '${session.line.baseUrl}/Users/${session.userId}/Items',
         options: Options(headers: _headers(session.accessToken)),
         queryParameters: {
           'ParentId': libraryId,
@@ -510,7 +519,7 @@ class EmbyAdapter implements MediaServerAdapter {
     required String seriesId,
   }) async {
     final seasonsResponse = await _dio.get<Map<String, dynamic>>(
-      '${session.server.baseUrl}/Users/${session.userId}/Items',
+      '${session.line.baseUrl}/Users/${session.userId}/Items',
       options: Options(headers: _headers(session.accessToken)),
       queryParameters: {
         'ParentId': seriesId,
@@ -521,7 +530,7 @@ class EmbyAdapter implements MediaServerAdapter {
       },
     );
     final episodesResponse = await _dio.get<Map<String, dynamic>>(
-      '${session.server.baseUrl}/Users/${session.userId}/Items',
+      '${session.line.baseUrl}/Users/${session.userId}/Items',
       options: Options(headers: _headers(session.accessToken)),
       queryParameters: {
         'ParentId': seriesId,
@@ -562,7 +571,7 @@ class EmbyAdapter implements MediaServerAdapter {
     for (final item in episodeItems) {
       final mappedEpisode = _mapSeriesEpisode(
         session: session,
-        serverId: session.server.id,
+        serverId: session.line.id,
         item: item,
       );
       final resolvedSeasonId = _resolveSeasonIdForEpisode(
@@ -844,7 +853,7 @@ class EmbyAdapter implements MediaServerAdapter {
     final path = imageIndex == null
         ? '/Items/$itemId/Images/$imageType'
         : '/Items/$itemId/Images/$imageType/$imageIndex';
-    return Uri.parse('${session.server.baseUrl}$path')
+    return Uri.parse('${session.line.baseUrl}$path')
         .replace(
           queryParameters: {
             'api_key': session.accessToken,

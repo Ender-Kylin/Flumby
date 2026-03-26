@@ -136,18 +136,29 @@ Future<void> _pump() async {
 PlayerLaunchContext _testLaunchContext() {
   final server = MediaServerProfile(
     id: 'server-1',
-    name: 'Test Emby',
+    defaultName: 'Test Emby',
+    type: MediaServerType.emby,
+    updatedAt: DateTime.utc(2026, 3, 25),
+  );
+  final line = MediaServerLine(
+    id: buildMediaServerLineId(
+      serverId: 'server-1',
+      baseUrl: 'https://emby.example.com',
+    ),
+    serverId: 'server-1',
+    customName: '主线路',
     baseUrl: 'https://emby.example.com',
     type: MediaServerType.emby,
     updatedAt: DateTime.utc(2026, 3, 25),
   );
   final session = MediaServerSession(
     server: server,
+    line: line,
     accessToken: 'token',
     userId: 'user-1',
   );
   final source = PlayerMediaSource(
-    serverId: server.id,
+    serverId: line.id,
     itemId: 'episode-1',
     title: 'Episode 1',
     streamUrl: 'https://emby.example.com/Videos/episode-1/stream',

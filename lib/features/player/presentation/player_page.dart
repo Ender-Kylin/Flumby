@@ -22,15 +22,15 @@ final playerLaunchContextProvider = FutureProvider.autoDispose
         final detail = await runProtectedServerCall<MediaDetail>(
           ref,
           session: request.session,
-          request: (adapter) => adapter.fetchItemDetail(
-            session: request.session,
+          request: (adapter, session) => adapter.fetchItemDetail(
+            session: session,
             itemId: request.itemId,
           ),
         );
         final localPlayback = await ref
             .watch(playbackStateRepositoryProvider)
             .loadState(
-              serverId: request.session.server.id,
+              serverId: request.session.line.id,
               itemId: request.itemId,
             );
         final resumePositionSeconds = math.max(
@@ -41,7 +41,7 @@ final playerLaunchContextProvider = FutureProvider.autoDispose
         return PlayerLaunchContext(
           session: request.session,
           source: PlayerMediaSource(
-            serverId: request.session.server.id,
+            serverId: request.session.line.id,
             itemId: request.itemId,
             title: detail.title,
             streamUrl: detail.streamUrl,
@@ -68,7 +68,25 @@ class PlayerPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final server = ref.watch(serverByIdProvider(serverId));
+    final line = ref.watch(serverLineByIdProvider(serverId));
+    if (line == null) {
+      final scaffold = Scaffold(
+        appBar: DesktopWindowFrame.isEnabled
+            ? null
+            : AppBar(title: Text(title ?? '服务器缺失')),
+        body: const Center(
+          child: Text('所选服务器在本地已不可用。'),
+        ),
+      );
+
+      return DesktopWindowFrame(
+        title: title ?? '服务器缺失',
+        showBackButton: true,
+        child: scaffold,
+      );
+    }
+
+    final server = ref.watch(serverByIdProvider(line.serverId));
     if (server == null) {
       final scaffold = Scaffold(
         appBar: DesktopWindowFrame.isEnabled
@@ -96,7 +114,7 @@ class PlayerPage extends ConsumerWidget {
         AsyncError(:final error) => _PlayerFailureCard(error: error),
         AsyncData(:final value) =>
           value == null
-              ? _PlayerReloginPrompt(server: server)
+              ? _PlayerReloginPrompt(server: server, line: line)
               : _PlayerSessionBody(itemId: itemId, session: value),
       },
     );
@@ -311,9 +329,10 @@ class _PlayerView extends ConsumerWidget {
 }
 
 class _PlayerReloginPrompt extends StatelessWidget {
-  const _PlayerReloginPrompt({required this.server});
+  const _PlayerReloginPrompt({required this.server, required this.line});
 
   final MediaServerProfile server;
+  final MediaServerLine line;
 
   @override
   Widget build(BuildContext context) {
@@ -321,7 +340,7 @@ class _PlayerReloginPrompt extends StatelessWidget {
       icon: Icons.lock_outline_rounded,
       title: '需要登录',
       description:
-          '${server.name} 在此设备上已没有保存的凭据。',
+          '${line.displayName(server.defaultName)} 在此设备上已没有保存的凭据。',
       action: FilledButton.icon(
         onPressed: () => context.go('/servers'),
         icon: const Icon(Icons.storage_rounded),

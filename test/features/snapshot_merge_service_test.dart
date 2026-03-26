@@ -13,7 +13,17 @@ void main() {
       servers: [
         SyncServerRecord(
           id: 'emby-main',
-          name: 'Living Room Emby',
+          defaultName: 'Living Room Emby',
+          type: 'emby',
+          updatedAt: DateTime.utc(2026, 3, 24, 9),
+          deviceId: deviceId,
+        ),
+      ],
+      serverLines: [
+        SyncServerLineRecord(
+          id: 'emby-main::https://emby.local',
+          serverId: 'emby-main',
+          customName: '内网',
           baseUrl: 'https://emby.local',
           type: 'emby',
           username: 'ender',
@@ -47,8 +57,18 @@ void main() {
       servers: [
         SyncServerRecord(
           id: 'emby-main',
-          name: 'Media Room Emby',
-          baseUrl: 'https://emby.local',
+          defaultName: 'Media Room Emby',
+          type: 'emby',
+          updatedAt: DateTime.utc(2026, 3, 25, 8),
+          deviceId: 'laptop-b',
+        ),
+      ],
+      serverLines: [
+        SyncServerLineRecord(
+          id: 'emby-main::https://emby.example.com',
+          serverId: 'emby-main',
+          customName: '外网',
+          baseUrl: 'https://emby.example.com',
           type: 'emby',
           username: 'ender',
           updatedAt: DateTime.utc(2026, 3, 25, 8),
@@ -83,7 +103,8 @@ void main() {
 
     expect(merged.deviceId, deviceId);
     expect(merged.updatedAt, DateTime.utc(2026, 3, 25, 9));
-    expect(merged.servers.single.name, 'Media Room Emby');
+    expect(merged.servers.single.defaultName, 'Media Room Emby');
+    expect(merged.serverLines, hasLength(2));
     expect(merged.preferences.single.value, 'jpn');
     expect(merged.playbackStates.single.positionSeconds, 2440);
   });

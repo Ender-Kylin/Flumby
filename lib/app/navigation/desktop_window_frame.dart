@@ -78,6 +78,7 @@ class _LinuxTitleBarState extends ConsumerState<LinuxTitleBar> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final activeServer = ref.watch(activeServerProvider);
+    final activeLine = ref.watch(activeServerLineProvider);
     final windowControl = ref.read(windowControlServiceProvider);
 
     return Material(
@@ -158,7 +159,12 @@ class _LinuxTitleBarState extends ConsumerState<LinuxTitleBar> {
                           ),
                           if (showServerName)
                             Text(
-                              activeServer?.name ?? 'Flumby',
+                              activeServer == null
+                                  ? 'Flumby'
+                                  : activeLine?.displayName(
+                                          activeServer.defaultName,
+                                        ) ??
+                                        activeServer.defaultName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.bodySmall?.copyWith(

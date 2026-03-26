@@ -19,31 +19,22 @@ void main() {
         preferences,
         secureStorage,
       );
-      final session = MediaServerSession(
-        server: MediaServerProfile(
-          id: 'emby-1',
-          name: 'Office TV',
-          baseUrl: 'https://media.example.com',
-          type: MediaServerType.emby,
-          username: 'alice',
-          isOnline: true,
-          updatedAt: DateTime.utc(2026, 3, 25, 8),
-        ),
-        accessToken: 'token-123',
-        userId: 'user-123',
-      );
+      final session = _testSession();
 
       addTearDown(database.close);
 
-      await repository.saveSession(session);
-      await repository.saveActiveServerId(session.server.id);
+      await repository.saveSession(session, password: 'secret-123');
+      await repository.saveActiveLineId(session.line.id);
 
       final storedServers = await repository.loadServers();
-      final storedSession = await repository.loadSessionById(session.server.id);
+      final storedLines = await repository.loadServerLines();
+      final storedSession = await repository.loadSessionByLineId(session.line.id);
 
       expect(storedServers, hasLength(1));
-      expect(storedServers.single.name, 'Office TV');
-      expect(storedServers.single.baseUrl, 'https://media.example.com');
+      expect(storedServers.single.defaultName, 'Office TV');
+      expect(storedLines, hasLength(1));
+      expect(storedLines.single.customName, '内网');
+      expect(storedLines.single.baseUrl, 'https://media.example.com');
       expect(
         await secureStorage.read(
           secureStorage.serverTokenKey(session.server.id),
@@ -56,14 +47,114 @@ void main() {
         ),
         'user-123',
       );
+      expect(
+        await secureStorage.read(
+          secureStorage.serverUsernameKey(session.server.id),
+        ),
+        'alice',
+      );
+      expect(
+        await secureStorage.read(
+          secureStorage.serverPasswordKey(session.server.id),
+        ),
+        'secret-123',
+      );
       expect(storedSession, session);
-      expect(await repository.loadActiveServerId(), session.server.id);
+      expect(
+        await repository.loadServerCredentials(session.server.id),
+        const StoredServerCredentials(
+          serverId: 'emby-1',
+          username: 'alice',
+          password: 'secret-123',
+        ),
+      );
+      expect(await repository.loadActiveLineId(), session.line.id);
 
-      await repository.clearSessionCredentials(session.server.id);
+      await repository.clearSessionCredentials(session.line.id);
 
-      expect(await repository.loadSessionById(session.server.id), isNull);
+      expect(await repository.loadSessionByLineId(session.line.id), isNull);
       expect(await repository.loadServers(), hasLength(1));
     },
+  );
+
+  test('additional lines reuse the same shared server credentials', () async {
+    final database = AppDatabase(NativeDatabase.memory());
+    final secureStorage = _FakeSecureStorageService();
+    final preferences = AppPreferencesRepository(database, secureStorage);
+    final repository = ServerLocalRepository(
+      database,
+      preferences,
+      secureStorage,
+    );
+    final session = _testSession();
+    final backupLine = MediaServerLine(
+      id: buildMediaServerLineId(
+        serverId: session.server.id,
+        baseUrl: 'https://backup.example.com',
+      ),
+      serverId: session.server.id,
+      customName: '外网',
+      baseUrl: 'https://backup.example.com',
+      type: MediaServerType.emby,
+      username: session.line.username,
+      isOnline: true,
+      updatedAt: DateTime.utc(2026, 3, 25, 9),
+    );
+
+    addTearDown(database.close);
+
+    await repository.saveSession(session, password: 'secret-123');
+    await repository.saveServerLine(
+      backupLine,
+      defaultName: session.server.defaultName,
+    );
+
+    final backupSession = await repository.loadSessionByLineId(backupLine.id);
+
+    expect(backupSession, isNotNull);
+    expect(backupSession!.accessToken, session.accessToken);
+    expect(backupSession.userId, session.userId);
+    expect(backupSession.line, backupLine);
+    expect(
+      await secureStorage.read(
+        secureStorage.serverTokenKey(session.server.id),
+      ),
+      'token-123',
+    );
+    expect(
+      await repository.loadServerCredentials(session.server.id),
+      const StoredServerCredentials(
+        serverId: 'emby-1',
+        username: 'alice',
+        password: 'secret-123',
+      ),
+    );
+  });
+}
+
+MediaServerSession _testSession() {
+  return MediaServerSession(
+    server: MediaServerProfile(
+      id: 'emby-1',
+      defaultName: 'Office TV',
+      type: MediaServerType.emby,
+      updatedAt: DateTime.utc(2026, 3, 25, 8),
+    ),
+    line: MediaServerLine(
+      id: buildMediaServerLineId(
+        serverId: 'emby-1',
+        baseUrl: 'https://media.example.com',
+      ),
+      serverId: 'emby-1',
+      customName: '内网',
+      baseUrl: 'https://media.example.com',
+      type: MediaServerType.emby,
+      username: 'alice',
+      isOnline: true,
+      updatedAt: DateTime.utc(2026, 3, 25, 8),
+    ),
+    accessToken: 'token-123',
+    userId: 'user-123',
   );
 }
 

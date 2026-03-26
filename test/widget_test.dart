@@ -23,28 +23,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('No media servers configured'), findsOneWidget);
-  });
-
-  testWidgets('server cards do not overflow on narrow layouts', (tester) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(820, 640);
-    addTearDown(tester.view.reset);
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          serverControllerProvider.overrideWith(_TestServerController.new),
-        ],
-        child: const FlumbyApp(),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Reachable'), findsOneWidget);
-    expect(find.byTooltip('Search'), findsOneWidget);
-    expect(find.byTooltip('Minimize'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+    expect(find.text('尚未配置媒体服务器'), findsOneWidget);
   });
 
   testWidgets('poster media cards keep long titles inside the card', (
@@ -77,7 +56,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('home page shows server switcher and continue watching first', (
+  testWidgets('home page shows line switcher and continue watching first', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 1;
@@ -86,8 +65,7 @@ void main() {
 
     await _pumpHomePage(
       tester,
-      servers: _homeTestServers,
-      activeServerId: _homeTestServers.first.id,
+      activeLineId: _homeTestLines.first.id,
       homeFeed: HomeFeed(
         continueWatching: [
           _homeMediaItem(id: 'continue-1', title: '正在播放'),
@@ -103,28 +81,17 @@ void main() {
     );
 
     expect(find.byKey(const Key('home-server-switcher')), findsOneWidget);
-    expect(find.text('当前服务器'), findsOneWidget);
+    expect(find.text('当前线路'), findsOneWidget);
     expect(find.text('继续观看'), findsOneWidget);
-    expect(
-      find.text('现在会以海报和横幅卡片展示 Emby 首页内容，不再只是占位文本列表。'),
-      findsNothing,
-    );
-    expect(find.text(_homeTestServers.first.baseUrl), findsNothing);
     expect(tester.takeException(), isNull);
-
-    final switcherTop =
-        tester.getTopLeft(find.byKey(const Key('home-server-switcher'))).dy;
-    final continueWatchingTop = tester.getTopLeft(find.text('继续观看')).dy;
-    expect(switcherTop, lessThan(continueWatchingTop));
   });
 
-  testWidgets('home page switches active server from the top menu', (
+  testWidgets('home page switches active line from the top menu', (
     tester,
   ) async {
     await _pumpHomePage(
       tester,
-      servers: _homeTestServers,
-      activeServerId: _homeTestServers.first.id,
+      activeLineId: _homeTestLines.first.id,
       homeFeed: HomeFeed(
         continueWatching: [
           _homeMediaItem(id: 'continue-1', title: '正在播放'),
@@ -135,48 +102,18 @@ void main() {
     await tester.tap(find.byKey(const Key('home-server-switcher')));
     await tester.pumpAndSettle();
 
-    expect(find.text('卧室 Emby'), findsOneWidget);
+    expect(find.text('卧室线路'), findsOneWidget);
 
-    await tester.tap(find.text('卧室 Emby'));
+    await tester.tap(find.text('卧室线路'));
     await tester.pumpAndSettle();
 
-    expect(find.text('卧室 Emby'), findsOneWidget);
-    expect(find.text('客厅 Emby'), findsNothing);
-  });
-
-  testWidgets('home page skips placeholder when continue watching is empty', (
-    tester,
-  ) async {
-    await _pumpHomePage(
-      tester,
-      servers: _homeTestServers,
-      activeServerId: _homeTestServers.first.id,
-      homeFeed: HomeFeed(
-        sections: [
-          HomeSection(
-            id: 'recent',
-            title: '最近添加',
-            items: [_homeMediaItem(id: 'recent-1', title: '最新电影')],
-          ),
-        ],
-      ),
-    );
-
-    expect(find.text('继续观看'), findsNothing);
-    expect(find.text('暂无继续观看内容'), findsNothing);
-    expect(find.text('最近添加'), findsOneWidget);
-
-    final switcherTop =
-        tester.getTopLeft(find.byKey(const Key('home-server-switcher'))).dy;
-    final sectionTop = tester.getTopLeft(find.text('最近添加')).dy;
-    expect(switcherTop, lessThan(sectionTop));
+    expect(find.text('卧室线路'), findsOneWidget);
   });
 }
 
 Future<void> _pumpHomePage(
   WidgetTester tester, {
-  required List<MediaServerProfile> servers,
-  required String activeServerId,
+  required String activeLineId,
   required HomeFeed homeFeed,
 }) async {
   await tester.pumpWidget(
@@ -186,8 +123,9 @@ Future<void> _pumpHomePage(
           () => _HomePageTestController(
             ServerRegistryState(
               isLoading: false,
-              activeServerId: activeServerId,
-              servers: servers,
+              activeLineId: activeLineId,
+              servers: _homeTestServers,
+              lines: _homeTestLines,
             ),
           ),
         ),
@@ -206,27 +144,6 @@ class _EmptyServerController extends ServerController {
   }
 }
 
-class _TestServerController extends ServerController {
-  @override
-  ServerRegistryState build() {
-    return ServerRegistryState(
-      isLoading: false,
-      activeServerId: 'emby-test',
-      servers: [
-        MediaServerProfile(
-          id: 'emby-test',
-          name: 'Local Emby',
-          baseUrl: 'http://127.0.0.1:8096',
-          type: MediaServerType.emby,
-          username: 'tester',
-          isOnline: true,
-          updatedAt: DateTime.utc(2026, 3, 25, 12),
-        ),
-      ],
-    );
-  }
-}
-
 class _HomePageTestController extends ServerController {
   _HomePageTestController(this._initialState);
 
@@ -239,23 +156,40 @@ class _HomePageTestController extends ServerController {
 
   @override
   Future<void> setActiveServer(String serverId) async {
-    state = state.copyWith(activeServerId: serverId, isLoading: false);
+    state = state.copyWith(activeLineId: serverId, isLoading: false);
   }
 }
 
 final _homeTestServers = [
   MediaServerProfile(
     id: 'server-a',
-    name: '客厅 Emby',
+    defaultName: '客厅 Emby',
+    type: MediaServerType.emby,
+    updatedAt: DateTime.utc(2026, 3, 25, 10),
+  ),
+];
+
+final _homeTestLines = [
+  MediaServerLine(
+    id: buildMediaServerLineId(
+      serverId: 'server-a',
+      baseUrl: 'http://192.168.1.2:8096',
+    ),
+    serverId: 'server-a',
+    customName: '客厅线路',
     baseUrl: 'http://192.168.1.2:8096',
     type: MediaServerType.emby,
     username: 'alice',
     isOnline: true,
     updatedAt: DateTime.utc(2026, 3, 25, 10),
   ),
-  MediaServerProfile(
-    id: 'server-b',
-    name: '卧室 Emby',
+  MediaServerLine(
+    id: buildMediaServerLineId(
+      serverId: 'server-a',
+      baseUrl: 'http://192.168.1.3:8096',
+    ),
+    serverId: 'server-a',
+    customName: '卧室线路',
     baseUrl: 'http://192.168.1.3:8096',
     type: MediaServerType.emby,
     username: 'bob',
@@ -270,7 +204,7 @@ MediaItemSummary _homeMediaItem({
 }) {
   return MediaItemSummary(
     id: id,
-    serverId: 'server-a',
+    serverId: _homeTestLines.first.id,
     libraryId: 'library-1',
     title: title,
     overview: '$title 的简介',

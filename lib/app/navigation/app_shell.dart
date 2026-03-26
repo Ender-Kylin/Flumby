@@ -14,11 +14,6 @@ class AppShell extends ConsumerWidget {
 
   static const _destinations = <_ShellDestination>[
     _ShellDestination(
-      label: '服务器',
-      icon: Icons.storage_rounded,
-      selectedIcon: Icons.storage,
-    ),
-    _ShellDestination(
       label: '首页',
       icon: Icons.movie_creation_outlined,
       selectedIcon: Icons.movie_creation_rounded,
@@ -27,6 +22,11 @@ class AppShell extends ConsumerWidget {
       label: '媒体库',
       icon: Icons.video_library_outlined,
       selectedIcon: Icons.video_library_rounded,
+    ),
+    _ShellDestination(
+      label: '服务器',
+      icon: Icons.storage_rounded,
+      selectedIcon: Icons.storage,
     ),
     _ShellDestination(
       label: '设置',
@@ -40,6 +40,7 @@ class AppShell extends ConsumerWidget {
     final useRail = MediaQuery.sizeOf(context).width >= 920;
     final currentDestination = _destinations[navigationShell.currentIndex];
     final activeServer = ref.watch(activeServerProvider);
+    final activeLine = ref.watch(activeServerLineProvider);
     final useDesktopTitleBar = DesktopWindowFrame.isEnabled;
 
     final shellScaffold = Scaffold(
@@ -53,7 +54,8 @@ class AppShell extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Center(
                       child: Text(
-                        activeServer.name,
+                        activeLine?.displayName(activeServer.defaultName) ??
+                            activeServer.defaultName,
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                     ),

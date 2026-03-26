@@ -8,6 +8,7 @@ import '../../../core/widgets/empty_state_card.dart';
 import '../../server/application/media_server_access.dart';
 import '../../server/application/server_controller.dart';
 import '../../server/domain/server_models.dart';
+import '../../server/presentation/server_line_switcher.dart';
 import '../domain/library_models.dart';
 
 final activeLibrariesProvider =
@@ -20,7 +21,8 @@ final activeLibrariesProvider =
       return runProtectedServerCall<List<LibrarySummary>>(
         ref,
         session: session,
-        request: (adapter) => adapter.fetchLibraries(session),
+        request: (adapter, session) => adapter.fetchLibraries(session),
+        allowLineFailover: true,
       );
     });
 
@@ -32,10 +34,11 @@ final libraryItemsProvider = FutureProvider.autoDispose
       return runProtectedServerCall<List<MediaItemSummary>>(
         ref,
         session: request.session,
-        request: (adapter) => adapter.fetchItems(
-          session: request.session,
+        request: (adapter, session) => adapter.fetchItems(
+          session: session,
           libraryId: request.libraryId,
         ),
+        allowLineFailover: true,
       );
     });
 
@@ -71,7 +74,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       });
     }
 
-    await ref.refresh(
+    final _ = await ref.refresh(
       libraryItemsProvider((
         session: session,
         libraryId: targetLibraryId,
@@ -83,11 +86,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   Widget build(BuildContext context) {
     final serverRegistry = ref.watch(serverControllerProvider);
     final activeServer = ref.watch(activeServerProvider);
+    final activeLine = ref.watch(activeServerLineProvider);
+    final lines = serverRegistry.lines;
     if (serverRegistry.isLoading && activeServer == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (activeServer == null) {
+    if (activeServer == null || activeLine == null) {
       return ListView(
         children: [
           EmptyStateCard(
@@ -112,6 +117,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: 32),
         children: [
+          if (lines.length > 1) ...[
+            ServerLineSwitcher(
+              activeServer: activeServer,
+              activeLine: activeLine,
+              lines: lines,
+            ),
+            const SizedBox(height: 24),
+          ],
           switch (activeSession) {
             AsyncLoading() => const Center(child: CircularProgressIndicator()),
             AsyncError(:final error) => _LibraryFailureCard(

@@ -11,22 +11,49 @@ void main() {
     registerFallbackValue(Options());
   });
 
+  test('signIn keeps default server name and custom line name', () async {
+    final dio = _MockDio();
+    final adapter = EmbyAdapter(dio);
+
+    when(
+      () => dio.post<Map<String, dynamic>>(
+        any(),
+        options: any(named: 'options'),
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((invocation) async {
+      final path = invocation.positionalArguments.first as String;
+      expect(path, 'http://127.0.0.1:8096/Users/AuthenticateByName');
+      return Response(
+        requestOptions: RequestOptions(path: path),
+        data: {
+          'ServerId': 'emby-1',
+          'ServerName': '家庭 Emby',
+          'AccessToken': 'token-123',
+          'User': {'Id': 'user-123'},
+        },
+      );
+    });
+
+    final session = await adapter.signIn(
+      const ServerSignInRequest(
+        baseUrl: 'http://127.0.0.1:8096/',
+        username: 'tester',
+        password: 'secret',
+        customName: '内网',
+      ),
+    );
+
+    expect(session.server.defaultName, '家庭 Emby');
+    expect(session.line.customName, '内网');
+    expect(session.line.id, 'emby-1::http://127.0.0.1:8096');
+    expect(session.line.baseUrl, 'http://127.0.0.1:8096');
+  });
+
   test('searchItems maps Emby item results into media summaries', () async {
     final dio = _MockDio();
     final adapter = EmbyAdapter(dio);
-    final session = MediaServerSession(
-      server: MediaServerProfile(
-        id: 'emby-1',
-        name: 'Local Emby',
-        baseUrl: 'http://127.0.0.1:8096',
-        type: MediaServerType.emby,
-        username: 'tester',
-        isOnline: true,
-        updatedAt: DateTime.utc(2026, 3, 25),
-      ),
-      accessToken: 'token-123',
-      userId: 'user-123',
-    );
+    final session = _testSession();
 
     when(
       () => dio.get<Map<String, dynamic>>(
@@ -104,19 +131,7 @@ void main() {
     () async {
       final dio = _MockDio();
       final adapter = EmbyAdapter(dio);
-      final session = MediaServerSession(
-        server: MediaServerProfile(
-          id: 'emby-1',
-          name: 'Local Emby',
-          baseUrl: 'http://127.0.0.1:8096',
-          type: MediaServerType.emby,
-          username: 'tester',
-          isOnline: true,
-          updatedAt: DateTime.utc(2026, 3, 25),
-        ),
-        accessToken: 'token-123',
-        userId: 'user-123',
-      );
+      final session = _testSession();
 
       when(
         () => dio.get<Map<String, dynamic>>(
@@ -200,19 +215,7 @@ void main() {
   test('fetchItems includes series entries for library browsing', () async {
     final dio = _MockDio();
     final adapter = EmbyAdapter(dio);
-    final session = MediaServerSession(
-      server: MediaServerProfile(
-        id: 'emby-1',
-        name: 'Local Emby',
-        baseUrl: 'http://127.0.0.1:8096',
-        type: MediaServerType.emby,
-        username: 'tester',
-        isOnline: true,
-        updatedAt: DateTime.utc(2026, 3, 25),
-      ),
-      accessToken: 'token-123',
-      userId: 'user-123',
-    );
+    final session = _testSession();
 
     when(
       () => dio.get<Map<String, dynamic>>(
@@ -267,19 +270,7 @@ void main() {
   test('fetchItemDetail uses PlaybackInfo URLs and playback ids', () async {
     final dio = _MockDio();
     final adapter = EmbyAdapter(dio);
-    final session = MediaServerSession(
-      server: MediaServerProfile(
-        id: 'emby-1',
-        name: 'Local Emby',
-        baseUrl: 'http://127.0.0.1:8096',
-        type: MediaServerType.emby,
-        username: 'tester',
-        isOnline: true,
-        updatedAt: DateTime.utc(2026, 3, 25),
-      ),
-      accessToken: 'token-123',
-      userId: 'user-123',
-    );
+    final session = _testSession();
 
     when(
       () => dio.get<Map<String, dynamic>>(
@@ -355,19 +346,7 @@ void main() {
     () async {
       final dio = _MockDio();
       final adapter = EmbyAdapter(dio);
-      final session = MediaServerSession(
-        server: MediaServerProfile(
-          id: 'emby-1',
-          name: 'Local Emby',
-          baseUrl: 'http://127.0.0.1:8096',
-          type: MediaServerType.emby,
-          username: 'tester',
-          isOnline: true,
-          updatedAt: DateTime.utc(2026, 3, 25),
-        ),
-        accessToken: 'token-123',
-        userId: 'user-123',
-      );
+      final session = _testSession();
 
       when(
         () => dio.get<Map<String, dynamic>>(
@@ -485,5 +464,31 @@ void main() {
       expect(detail.seriesSeasons.last.seasonNumber, 2);
       expect(detail.seriesSeasons.last.episodes.single.id, 'episode-3');
     },
+  );
+}
+
+MediaServerSession _testSession() {
+  return MediaServerSession(
+    server: MediaServerProfile(
+      id: 'emby-1',
+      defaultName: 'Local Emby',
+      type: MediaServerType.emby,
+      updatedAt: DateTime.utc(2026, 3, 25),
+    ),
+    line: MediaServerLine(
+      id: buildMediaServerLineId(
+        serverId: 'emby-1',
+        baseUrl: 'http://127.0.0.1:8096',
+      ),
+      serverId: 'emby-1',
+      customName: '内网',
+      baseUrl: 'http://127.0.0.1:8096',
+      type: MediaServerType.emby,
+      username: 'tester',
+      isOnline: true,
+      updatedAt: DateTime.utc(2026, 3, 25),
+    ),
+    accessToken: 'token-123',
+    userId: 'user-123',
   );
 }

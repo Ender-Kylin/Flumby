@@ -28,7 +28,8 @@ void main() {
         await database.close();
       });
 
-      final sessionProvider = serverSessionProvider('emby-1');
+      final session = _testSession();
+      final sessionProvider = serverSessionProvider(session.line.id);
       final subscription = container.listen<AsyncValue<MediaServerSession?>>(
         sessionProvider,
         (previous, next) {},
@@ -40,28 +41,46 @@ void main() {
         isA<AsyncLoading<MediaServerSession?>>(),
       );
 
-      final session = MediaServerSession(
-        server: MediaServerProfile(
-          id: 'emby-1',
-          name: 'Office TV',
-          baseUrl: 'https://tv.micu.hk',
-          type: MediaServerType.emby,
-          username: 'EnderKylin',
-          isOnline: true,
-          updatedAt: DateTime.utc(2026, 3, 25, 20, 30),
-        ),
-        accessToken: 'token-123',
-        userId: 'user-123',
+      await container.read(serverControllerProvider.notifier).saveSession(
+        session,
+        password: 'secret-123',
       );
-
-      await container
-          .read(serverControllerProvider.notifier)
-          .saveSession(session);
       await Future<void>.delayed(Duration.zero);
 
       expect(await container.read(sessionProvider.future), session);
       expect(container.read(activeServerProvider)?.id, session.server.id);
+      expect(container.read(activeServerLineProvider)?.id, session.line.id);
+      expect(
+        await secureStorage.read(secureStorage.serverPasswordKey(session.server.id)),
+        'secret-123',
+      );
     },
+  );
+}
+
+MediaServerSession _testSession() {
+  return MediaServerSession(
+    server: MediaServerProfile(
+      id: 'emby-1',
+      defaultName: 'Office TV',
+      type: MediaServerType.emby,
+      updatedAt: DateTime.utc(2026, 3, 25, 20, 30),
+    ),
+    line: MediaServerLine(
+      id: buildMediaServerLineId(
+        serverId: 'emby-1',
+        baseUrl: 'https://tv.micu.hk',
+      ),
+      serverId: 'emby-1',
+      customName: '外网',
+      baseUrl: 'https://tv.micu.hk',
+      type: MediaServerType.emby,
+      username: 'EnderKylin',
+      isOnline: true,
+      updatedAt: DateTime.utc(2026, 3, 25, 20, 30),
+    ),
+    accessToken: 'token-123',
+    userId: 'user-123',
   );
 }
 

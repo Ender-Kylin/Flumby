@@ -18,6 +18,12 @@ class SnapshotMergeService {
         keyOf: (record) => record.id,
         updatedAtOf: (record) => record.updatedAt,
       ),
+      serverLines: _mergeBy<SyncServerLineRecord>(
+        local.serverLines,
+        remote.serverLines,
+        keyOf: (record) => record.id,
+        updatedAtOf: (record) => record.updatedAt,
+      ),
       preferences: _mergeBy<SyncPreferenceRecord>(
         local.preferences,
         remote.preferences,

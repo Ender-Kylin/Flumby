@@ -22,8 +22,8 @@ final mediaDetailProvider = FutureProvider.autoDispose
       return runProtectedServerCall<MediaDetail>(
         ref,
         session: request.session,
-        request: (adapter) => adapter.fetchItemDetail(
-          session: request.session,
+        request: (adapter, session) => adapter.fetchItemDetail(
+          session: session,
           itemId: request.itemId,
         ),
       );
@@ -53,7 +53,25 @@ class DetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final server = ref.watch(serverByIdProvider(serverId));
+    final line = ref.watch(serverLineByIdProvider(serverId));
+    if (line == null) {
+      final fallbackScaffold = Scaffold(
+        appBar: DesktopWindowFrame.isEnabled
+            ? null
+            : AppBar(title: Text(title ?? '服务器缺失')),
+        body: const Center(
+          child: Text('所选服务器在本地已不可用。'),
+        ),
+      );
+
+      return DesktopWindowFrame(
+        title: title ?? '服务器缺失',
+        showBackButton: true,
+        child: fallbackScaffold,
+      );
+    }
+
+    final server = ref.watch(serverByIdProvider(line.serverId));
     if (server == null) {
       final fallbackScaffold = Scaffold(
         appBar: DesktopWindowFrame.isEnabled
@@ -71,23 +89,24 @@ class DetailPage extends ConsumerWidget {
       );
     }
 
+    final displayName = line.displayName(server.defaultName);
     final session = ref.watch(serverSessionProvider(serverId));
     final scaffold = Scaffold(
       appBar: DesktopWindowFrame.isEnabled
           ? null
-          : AppBar(title: Text(title ?? server.name)),
+          : AppBar(title: Text(title ?? displayName)),
       body: switch (session) {
         AsyncLoading() => const Center(child: CircularProgressIndicator()),
         AsyncError(:final error) => _DetailFailureCard(error: error),
         AsyncData(:final value) =>
           value == null
-              ? _ReloginPrompt(server: server)
+              ? _ReloginPrompt(server: server, line: line)
               : _DetailBody(itemId: itemId, session: value),
       },
     );
 
     return DesktopWindowFrame(
-      title: title ?? server.name,
+      title: title ?? displayName,
       showBackButton: true,
       child: scaffold,
     );
@@ -106,7 +125,7 @@ class _DetailBody extends ConsumerWidget {
       mediaDetailProvider((session: session, itemId: itemId)),
     );
     final localPlayback = ref.watch(
-      savedPlaybackStateProvider((serverId: session.server.id, itemId: itemId)),
+      savedPlaybackStateProvider((serverId: session.line.id, itemId: itemId)),
     );
 
     return switch (detail) {
@@ -290,7 +309,7 @@ class _DetailBody extends ConsumerWidget {
   void _openPlayer(BuildContext context, String title) {
     context.push(
       Uri(
-        path: '/player/${session.server.id}/$itemId',
+        path: '/player/${session.line.id}/$itemId',
         queryParameters: {'title': title},
       ).toString(),
     );
@@ -421,12 +440,12 @@ class _DetailSummary extends StatelessWidget {
     final minutes = duration.inMinutes.remainder(60);
     final secs = duration.inSeconds.remainder(60);
     if (hours > 0) {
-      return '${hours}小时${minutes}分钟';
+      return '$hours小时$minutes分钟';
     }
     if (minutes > 0) {
-      return '${minutes}分${secs}秒';
+      return '$minutes分$secs秒';
     }
-    return '${secs}秒';
+    return '$secs秒';
   }
 }
 
@@ -659,9 +678,10 @@ class _EpisodeListTile extends StatelessWidget {
 }
 
 class _ReloginPrompt extends StatelessWidget {
-  const _ReloginPrompt({required this.server});
+  const _ReloginPrompt({required this.server, required this.line});
 
   final MediaServerProfile server;
+  final MediaServerLine line;
 
   @override
   Widget build(BuildContext context) {
@@ -669,7 +689,7 @@ class _ReloginPrompt extends StatelessWidget {
       icon: Icons.lock_outline_rounded,
       title: '需要登录',
       description:
-          '${server.name} 在此设备上已没有保存的凭据。',
+          '${line.displayName(server.defaultName)} 在此设备上已没有保存的凭据。',
       action: FilledButton.icon(
         onPressed: () => context.go('/servers'),
         icon: const Icon(Icons.storage_rounded),
